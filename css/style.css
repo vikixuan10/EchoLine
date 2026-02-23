@@ -1,0 +1,340 @@
+/* EchoLine - 淡雅简洁，移动端优先 */
+
+:root {
+  --bg: #f8f6f3;
+  --bg-card: #fff;
+  --text: #3d3a36;
+  --text-muted: #7a756e;
+  --accent: #8b7355;
+  --accent-soft: #c4b5a0;
+  --border: #e8e4df;
+  --highlight: #e8e0d5;
+  --safe-top: env(safe-area-inset-top, 0);
+  --safe-bottom: env(safe-area-inset-bottom, 0);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 16px;
+  color: var(--text);
+  background: var(--bg);
+  -webkit-tap-highlight-color: transparent;
+}
+
+#app {
+  min-height: 100%;
+  padding-top: var(--safe-top);
+  padding-bottom: var(--safe-bottom);
+}
+
+/* Pages */
+.page {
+  display: none;
+  min-height: 100vh;
+  flex-direction: column;
+}
+
+.page.active {
+  display: flex;
+}
+
+/* ---------- 剧集列表页 ---------- */
+#episode-list-page {
+  padding: 1rem 1rem 2rem;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 1.5rem;
+  padding: 1rem 0;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: 0.02em;
+}
+
+.subtitle {
+  margin: 0.25rem 0 0;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.episode-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.episode-list li {
+  margin: 0;
+}
+
+.episode-link {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  text-decoration: none;
+  font-size: 1rem;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.episode-link:active {
+  background: var(--highlight);
+}
+
+.episode-thumb {
+  flex: 0 0 auto;
+  width: 96px;
+  height: 54px;
+  border-radius: 6px;
+  background: var(--border);
+  background-size: cover;
+  background-position: center;
+}
+
+.episode-thumb.loaded {
+  background-color: transparent;
+}
+
+.episode-info {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.episode-link .title {
+  font-weight: 500;
+  display: block;
+}
+
+.episode-link .meta {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-top: 0.25rem;
+  display: block;
+}
+
+.empty-hint {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  padding: 2rem 1rem;
+}
+
+.empty-hint.hidden {
+  display: none;
+}
+
+/* ---------- 播放页 ---------- */
+#player-page {
+  height: 100vh;
+  overflow: hidden;
+}
+
+.back-link {
+  flex-shrink: 0;
+  padding: 0.75rem 1rem;
+  color: var(--accent);
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.back-link:active {
+  opacity: 0.8;
+}
+
+.video-section {
+  flex: 0 0 auto;
+  position: relative;
+  width: 100%;
+  background: #1a1a1a;
+  max-height: 45vh;
+}
+
+#video {
+  display: block;
+  width: 100%;
+  max-height: 45vh;
+  object-fit: contain;
+}
+
+.video-controls-overlay {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.5rem 1rem;
+  background: rgba(248, 246, 243, 0.98);
+  border-top: 1px solid var(--border);
+}
+
+.mode-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.mode-btn {
+  padding: 0.4rem 0.7rem;
+  font-size: 0.85rem;
+  color: var(--text);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.mode-btn.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.ab-controls {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.4rem 1rem;
+  background: rgba(248, 246, 243, 0.98);
+  border-top: 1px solid var(--border);
+}
+
+.ab-btn {
+  padding: 0.4rem 0.9rem;
+  font-size: 0.85rem;
+  color: var(--text);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.ab-btn.set-a {
+  background: #4a9;
+  color: #fff;
+  border-color: #4a9;
+}
+
+.ab-btn.set-b {
+  background: #557ac5;
+  color: #fff;
+  border-color: #557ac5;
+}
+
+.controls-right {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.subtitle-mode-control,
+.speed-control {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.subtitle-mode-control label,
+.speed-control label {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  min-width: 2em;
+  text-align: right;
+}
+
+.subtitle-mode-control select,
+.speed-control select {
+  padding: 0.3rem 0.5rem;
+  font-size: 0.85rem;
+  color: var(--text);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.subtitle-section {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+
+.subtitle-list {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 1rem;
+}
+
+.subtitle-line {
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+  border: 1px solid transparent;
+}
+
+.subtitle-line:active {
+  background: var(--highlight);
+}
+
+.subtitle-line.current {
+  background: var(--highlight);
+  border-color: var(--accent-soft);
+}
+
+.subtitle-line .text {
+  font-size: 1.05rem;
+  line-height: 1.5;
+  color: var(--text);
+}
+
+.subtitle-line .text-zh {
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  margin-top: 0.25rem;
+}
+
+.subtitle-line.loop-a {
+  border-left: 3px solid #4a9;
+}
+
+.subtitle-line.loop-b {
+  border-left: 3px solid #557ac5;
+}
+
+.subtitle-line.loop-a .text::before {
+  content: 'A ';
+  color: #4a9;
+  font-weight: 700;
+  font-size: 0.8em;
+}
+
+.subtitle-line.loop-b .text::before {
+  content: 'B ';
+  color: #557ac5;
+  font-weight: 700;
+  font-size: 0.8em;
+}

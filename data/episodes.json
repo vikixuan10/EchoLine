@@ -1,0 +1,21 @@
+[
+  {
+    "title": "S10E15 视频有字幕版",
+    "subtitle": "The One Where Estelle Dies",
+    "videoUrl": "videos/episode_0.mp4",
+    "subtitles": {
+      "en": "subtitles/episode_0.en.srt"
+    },
+    "subtitleMode": "en"
+  },
+  {
+    "title": "S10E15 视频无字幕版",
+    "subtitle": "S10E15 视频无字幕版",
+    "videoUrl": "videos/episode_1.mp4",
+    "subtitles": {
+      "en": "subtitles/episode_1.en.srt",
+      "zh": "subtitles/episode_1.zh.srt"
+    },
+    "subtitleMode": "en"
+  }
+]

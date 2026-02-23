@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>EchoLine - 老友记英语学习</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- 剧集列表页 -->
+    <main id="episode-list-page" class="page active">
+      <header class="header">
+        <h1>EchoLine</h1>
+        <p class="subtitle">老友记英语学习</p>
+      </header>
+      <ul id="episode-list" class="episode-list"></ul>
+      <p id="empty-hint" class="empty-hint hidden">暂无剧集，请在管理端添加。</p>
+    </main>
+
+    <!-- 播放页 -->
+    <main id="player-page" class="page">
+      <a id="back-to-list" class="back-link" href="#">← 返回列表</a>
+      <section class="video-section">
+        <video id="video" playsinline controls></video>
+        <div class="video-controls-overlay">
+          <div class="mode-buttons">
+            <button type="button" id="btn-mode-normal" class="mode-btn active">正常</button>
+            <button type="button" id="btn-mode-single" class="mode-btn">单句循环</button>
+            <button type="button" id="btn-mode-ab" class="mode-btn">AB 循环</button>
+          </div>
+          <div class="controls-right">
+            <div class="subtitle-mode-control">
+              <label for="subtitle-mode-select">字幕</label>
+              <select id="subtitle-mode-select">
+                <option value="en">英文</option>
+                <option value="zh">中文</option>
+                <option value="both">双语</option>
+              </select>
+            </div>
+            <div class="speed-control">
+              <label for="speed-select">语速</label>
+              <select id="speed-select"></select>
+            </div>
+          </div>
+        </div>
+        <div id="ab-controls" class="ab-controls" style="display:none;">
+          <button type="button" id="btn-set-a" class="ab-btn">设 A</button>
+          <button type="button" id="btn-set-b" class="ab-btn">设 B</button>
+        </div>
+      </section>
+      <section class="subtitle-section">
+        <div id="subtitle-list" class="subtitle-list"></div>
+      </section>
+    </main>
+  </div>
+  <script src="js/subtitles.js"></script>
+  <script src="js/player.js"></script>
+  <script src="js/subtitle-sync.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

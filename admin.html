@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EchoLine 管理端</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    .admin-page { padding: 1rem; max-width: 800px; margin: 0 auto; }
+    .admin-page h1 { font-size: 1.25rem; margin-bottom: 1rem; }
+    .admin-section { margin-bottom: 2rem; }
+    .admin-section h2 { font-size: 1rem; color: var(--text-muted); margin-bottom: 0.75rem; }
+    .form-row { margin-bottom: 0.75rem; }
+    .form-row label { display: block; font-size: 0.9rem; margin-bottom: 0.25rem; color: var(--text-muted); }
+    .form-row input[type="text"], .form-row input[type="file"] { width: 100%; padding: 0.5rem; border: 1px solid var(--border); border-radius: 6px; }
+    .btn { padding: 0.5rem 1rem; font-size: 0.9rem; background: var(--accent); color: #fff; border: none; border-radius: 6px; cursor: pointer; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-secondary { background: var(--border); color: var(--text); }
+    .btn-danger { background: #c55; color: #fff; }
+    .episode-cards { display: flex; flex-direction: column; gap: 0.75rem; }
+    .episode-card { padding: 1rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
+    .episode-card .title { font-weight: 500; }
+    .episode-card .actions { display: flex; gap: 0.5rem; }
+    .edit-wrap { margin-top: 0.5rem; padding: 1rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; }
+    .edit-wrap h2 { margin-top: 0; }
+    .current-file { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.2rem; }
+    .hint { font-size: 0.8rem; color: var(--text-muted); }
+    .status { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem; }
+    .status.err { color: #b54; }
+    .status.ok { color: #5a7; }
+    .link-user { margin-top: 1rem; }
+    .link-user a { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <div id="app" class="admin-page">
+    <h1>EchoLine 管理端</h1>
+    <p class="subtitle">一集一集上传，字幕用 Subtitle Edit 调好后上传。保存后用户端立即可见。</p>
+
+    <section class="admin-section">
+      <h2>添加一集</h2>
+      <form id="add-form">
+        <div class="form-row">
+          <label>标题（如：S01E01 试播集）</label>
+          <input type="text" id="add-title" placeholder="第1集" />
+        </div>
+        <div class="form-row">
+          <label>副标题 <span class="hint">（可选，不填则与标题相同）</span></label>
+          <input type="text" id="add-subtitle" placeholder="The One Where..." />
+        </div>
+        <div class="form-row">
+          <label>视频文件</label>
+          <input type="file" id="add-video" accept="video/*" required />
+        </div>
+        <div class="form-row">
+          <label>英文字幕 SRT</label>
+          <input type="file" id="add-srt-en" accept=".srt,text/plain" required />
+        </div>
+        <div class="form-row">
+          <label>中文字幕 SRT（可选）</label>
+          <input type="file" id="add-srt-zh" accept=".srt,text/plain" />
+        </div>
+        <button type="submit" class="btn" id="add-btn">上传并发布</button>
+      </form>
+      <p id="add-status" class="status"></p>
+    </section>
+
+    <section class="admin-section">
+      <h2>已上架剧集</h2>
+      <div id="episode-cards" class="episode-cards"></div>
+      <p id="list-empty" class="status" style="display:none;">暂无剧集，请先添加一集。</p>
+    </section>
+
+    <p class="link-user"><a href="index.html">→ 打开用户端播放器</a></p>
+  </div>
+  <script>
+    (function () {
+      var API = '/api';
+      var episodes = [];
+      var editingIndex = -1;
+
+      function getEpisodes() {
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', API + '/episodes');
+        xhr.onload = function () {
+          try { episodes = JSON.parse(xhr.responseText || '[]'); } catch (e) { episodes = []; }
+          renderList();
+        };
+        xhr.onerror = function () { episodes = []; renderList(); };
+        xhr.send();
+      }
+
+      function renderList() {
+        var container = document.getElementById('episode-cards');
+        var empty = document.getElementById('list-empty');
+        container.innerHTML = '';
+        if (episodes.length === 0) {
+          empty.style.display = 'block';
+          return;
+        }
+        empty.style.display = 'none';
+        episodes.forEach(function (ep, i) {
+          var card = document.createElement('div');
+          card.className = 'episode-card';
+          card.id = 'card-' + i;
+          card.innerHTML = '<span class="title">' + escapeHtml(ep.title || '第' + (i + 1) + '集') + '</span>' +
+            '<div class="actions">' +
+            '<button type="button" class="btn btn-secondary edit-btn" data-index="' + i + '">编辑</button>' +
+            '<button type="button" class="btn btn-danger del-btn" data-index="' + i + '">删除</button>' +
+            '</div>';
+          card.querySelector('.edit-btn').addEventListener('click', function () { openEdit(i); });
+          card.querySelector('.del-btn').addEventListener('click', function () { deleteEpisode(i); });
+          container.appendChild(card);
+        });
+      }
+
+      function escapeHtml(s) {
+        if (!s) return '';
+        var d = document.createElement('div');
+        d.textContent = s;
+        return d.innerHTML;
+      }
+
+      // --- 添加一集 ---
+      document.getElementById('add-form').addEventListener('submit', function (e) {
+        e.preventDefault();
+        var status = document.getElementById('add-status');
+        var title = document.getElementById('add-title').value.trim() || '新剧集';
+        var videoInput = document.getElementById('add-video');
+        var srtEnInput = document.getElementById('add-srt-en');
+        var srtZhInput = document.getElementById('add-srt-zh');
+        if (!videoInput.files.length || !srtEnInput.files.length) {
+          status.textContent = '请选择视频和英文字幕文件。';
+          status.className = 'status err';
+          return;
+        }
+        var subtitle = document.getElementById('add-subtitle').value.trim();
+        var fd = new FormData();
+        fd.append('title', title);
+        if (subtitle) fd.append('subtitle', subtitle);
+        fd.append('video', videoInput.files[0]);
+        fd.append('srtEn', srtEnInput.files[0]);
+        if (srtZhInput.files.length) fd.append('srtZh', srtZhInput.files[0]);
+        status.textContent = '上传中…';
+        status.className = 'status';
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', API + '/episode');
+        xhr.onload = function () {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            status.textContent = '已发布，用户端立即可见。';
+            status.className = 'status ok';
+            document.getElementById('add-title').value = '';
+            document.getElementById('add-subtitle').value = '';
+            videoInput.value = '';
+            srtEnInput.value = '';
+            srtZhInput.value = '';
+            getEpisodes();
+          } else {
+            status.textContent = '上传失败：' + (xhr.responseText || xhr.status);
+            status.className = 'status err';
+          }
+        };
+        xhr.onerror = function () {
+          status.textContent = '网络错误，请确认已运行 node server.js。';
+          status.className = 'status err';
+        };
+        xhr.send(fd);
+      });
+
+      // --- 删除剧集 ---
+      function deleteEpisode(index) {
+        var ep = episodes[index];
+        if (!confirm('确定删除「' + (ep.title || '第' + (index + 1) + '集') + '」？\n删除后视频与字幕文件将从磁盘移除。')) return;
+        var xhr = new XMLHttpRequest();
+        xhr.open('DELETE', API + '/episode/' + index);
+        xhr.onload = function () {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            closeEdit();
+            getEpisodes();
+          } else {
+            alert('删除失败：' + (xhr.responseText || xhr.status));
+          }
+        };
+        xhr.onerror = function () { alert('网络错误'); };
+        xhr.send();
+      }
+
+      // --- 编辑剧集 ---
+      function fileName(path) {
+        return path ? path.split('/').pop() : '无';
+      }
+
+      function openEdit(index) {
+        closeEdit();
+        editingIndex = index;
+        var ep = episodes[index];
+        var card = document.getElementById('card-' + index);
+
+        var wrap = document.createElement('div');
+        wrap.className = 'edit-wrap';
+        wrap.id = 'edit-wrap';
+
+        var videoName = fileName(ep.videoUrl);
+        var enName = fileName(ep.subtitles && ep.subtitles.en);
+        var zhName = fileName(ep.subtitles && ep.subtitles.zh);
+
+        wrap.innerHTML =
+          '<h2 style="margin-top:0;">编辑剧集 — ' + escapeHtml(ep.title || '第' + (index + 1) + '集') + '</h2>' +
+          '<form id="edit-form">' +
+            '<div class="form-row">' +
+              '<label>标题</label>' +
+              '<input type="text" id="edit-title" value="' + escapeHtml(ep.title || '') + '" />' +
+            '</div>' +
+            '<div class="form-row">' +
+              '<label>副标题 <span class="hint">（可选，不填则与标题相同）</span></label>' +
+              '<input type="text" id="edit-subtitle" value="' + escapeHtml(ep.subtitle || '') + '" placeholder="The One Where..." />' +
+            '</div>' +
+            '<div class="form-row">' +
+              '<label>视频文件 <span class="hint">（不选则保留原视频）</span></label>' +
+              '<p class="current-file">当前：' + escapeHtml(videoName) + '</p>' +
+              '<input type="file" id="edit-video" accept="video/*" />' +
+            '</div>' +
+            '<div class="form-row">' +
+              '<label>英文字幕 SRT <span class="hint">（不选则保留原字幕）</span></label>' +
+              '<p class="current-file">当前：' + escapeHtml(enName) + '</p>' +
+              '<input type="file" id="edit-srt-en" accept=".srt,text/plain" />' +
+            '</div>' +
+            '<div class="form-row">' +
+              '<label>中文字幕 SRT <span class="hint">（可选，不选则保留原字幕）</span></label>' +
+              '<p class="current-file">当前：' + escapeHtml(zhName) + '</p>' +
+              '<input type="file" id="edit-srt-zh" accept=".srt,text/plain" />' +
+            '</div>' +
+            '<div style="display:flex; gap:0.5rem;">' +
+              '<button type="submit" class="btn">保存</button>' +
+              '<button type="button" class="btn btn-secondary" id="edit-cancel">取消</button>' +
+            '</div>' +
+          '</form>' +
+          '<p id="edit-status" class="status"></p>';
+
+        card.insertAdjacentElement('afterend', wrap);
+        wrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+        document.getElementById('edit-cancel').addEventListener('click', closeEdit);
+        document.getElementById('edit-form').addEventListener('submit', submitEdit);
+      }
+
+      function closeEdit() {
+        var old = document.getElementById('edit-wrap');
+        if (old) old.parentNode.removeChild(old);
+        editingIndex = -1;
+      }
+
+      function submitEdit(e) {
+        e.preventDefault();
+        if (editingIndex < 0) return;
+        var status = document.getElementById('edit-status');
+        var fd = new FormData();
+        var title = document.getElementById('edit-title').value.trim();
+        if (title) fd.append('title', title);
+        var subtitleVal = document.getElementById('edit-subtitle').value.trim();
+        fd.append('subtitle', subtitleVal);
+        var videoInput = document.getElementById('edit-video');
+        var srtEnInput = document.getElementById('edit-srt-en');
+        var srtZhInput = document.getElementById('edit-srt-zh');
+        if (videoInput.files.length) fd.append('video', videoInput.files[0]);
+        if (srtEnInput.files.length) fd.append('srtEn', srtEnInput.files[0]);
+        if (srtZhInput.files.length) fd.append('srtZh', srtZhInput.files[0]);
+        status.textContent = '保存中…';
+        status.className = 'status';
+        var xhr = new XMLHttpRequest();
+        xhr.open('PUT', API + '/episode/' + editingIndex);
+        xhr.onload = function () {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            status.textContent = '已保存，用户端将使用更新后的内容。';
+            status.className = 'status ok';
+            getEpisodes();
+          } else {
+            status.textContent = '保存失败：' + (xhr.responseText || xhr.status);
+            status.className = 'status err';
+          }
+        };
+        xhr.onerror = function () {
+          status.textContent = '网络错误';
+          status.className = 'status err';
+        };
+        xhr.send(fd);
+      }
+
+      getEpisodes();
+    })();
+  </script>
+</body>
+</html>
