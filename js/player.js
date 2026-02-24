@@ -64,12 +64,14 @@
       div.dataset.end = item.end;
       var text = getText(item, mode);
       var tsHtml = '<span class="timestamp">' + formatTimestamp(item.start) + '</span>';
+      var innerHtml;
       if (text.indexOf('\n') !== -1) {
         var parts = text.split('\n');
-        div.innerHTML = tsHtml + '<span class="text">' + escapeHtml(parts[0]) + '</span><span class="text-zh">' + escapeHtml(parts[1] || '') + '</span>';
+        innerHtml = '<span class="text">' + escapeHtml(parts[0]) + '</span><span class="text-zh">' + escapeHtml(parts[1] || '') + '</span>';
       } else {
-        div.innerHTML = tsHtml + '<span class="text">' + escapeHtml(text) + '</span>';
+        innerHtml = '<span class="text">' + escapeHtml(text) + '</span>';
       }
+      div.innerHTML = tsHtml + '<div class="text-wrap">' + innerHtml + '</div>';
       subtitleListEl.appendChild(div);
     });
   }

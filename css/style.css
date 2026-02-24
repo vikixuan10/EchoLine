@@ -310,27 +310,29 @@ html, body {
 
 .subtitle-line .timestamp {
   flex-shrink: 0;
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   color: var(--text-muted);
-  opacity: 0.45;
+  opacity: 0.4;
   font-variant-numeric: tabular-nums;
-  letter-spacing: 0.02em;
-  min-width: 2.8em;
   user-select: none;
+}
+
+.subtitle-line .text-wrap {
+  flex: 1;
+  min-width: 0;
 }
 
 .subtitle-line .text {
   font-size: 1.05rem;
   line-height: 1.5;
   color: var(--text);
-  flex: 1;
-  min-width: 0;
+  display: block;
 }
 
 .subtitle-line .text-zh {
   font-size: 0.95rem;
   color: var(--text-muted);
-  margin-top: 0.25rem;
+  margin-top: 0.15rem;
   display: block;
 }
 
