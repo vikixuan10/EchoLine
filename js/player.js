@@ -93,8 +93,11 @@
     var lines = subtitleListEl.querySelectorAll('.subtitle-line');
     var el = lines[index];
     if (!el) return;
+    var containerRect = subtitleListEl.getBoundingClientRect();
+    var elRect = el.getBoundingClientRect();
+    var relativeTop = elRect.top - containerRect.top + subtitleListEl.scrollTop;
     subtitleListEl.scrollTo({
-      top: el.offsetTop - (subtitleListEl.clientHeight / 2) + (el.clientHeight / 2),
+      top: relativeTop - (subtitleListEl.clientHeight / 2) + (elRect.height / 2),
       behavior: 'smooth'
     });
   }
