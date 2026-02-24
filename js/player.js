@@ -92,7 +92,11 @@
   function scrollToIndex(index) {
     var lines = subtitleListEl.querySelectorAll('.subtitle-line');
     var el = lines[index];
-    if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    if (!el) return;
+    subtitleListEl.scrollTo({
+      top: el.offsetTop - (subtitleListEl.clientHeight / 2) + (el.clientHeight / 2),
+      behavior: 'smooth'
+    });
   }
 
   if (speedSelect) initSpeedSelect();
