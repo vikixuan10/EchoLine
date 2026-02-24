@@ -57,8 +57,8 @@ function generateThumbnail(videoRelPath) {
   const thumbAbsPath = path.join(VIDEOS_DIR, thumbName);
   try {
     execSync(
-      `ffmpeg -y -ss 2 -i "${videoAbsPath}" -vf "thumbnail=300" -frames:v 1 "${thumbAbsPath}"`,
-      { timeout: 60000, stdio: 'pipe' }
+      `ffmpeg -y -ss 5 -i "${videoAbsPath}" -vframes 1 "${thumbAbsPath}"`,
+      { timeout: 15000, stdio: 'pipe' }
     );
     if (fs.existsSync(thumbAbsPath)) return thumbRelPath;
   } catch (_) {}
