@@ -106,7 +106,9 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // API: POST /api/episode — 添加一集（multipart: title, video, srtEn, srtZh?）
+  // API: POST /api/episode — 添加一集
+  // 方式一：multipart 带 video 文件（小文件直传，易受内存限制）
+  // 方式二：无 video，带 videoFilename 表示服务器上已有视频（推荐：大视频先用 scp 传到 videos/ 再在此登记）
   if (pathname === '/api/episode' && req.method === 'POST') {
     let body = [];
     req.on('data', (chunk) => body.push(chunk));
@@ -134,19 +136,51 @@ const server = http.createServer((req, res) => {
       const title = (fields.title || '新剧集').trim();
       const episodes = getEpisodes();
       const index = episodes.length;
-      const prefix = 'episode_' + index;
-
       ensureDirs();
 
       const videoFiles = fields.video || [];
       const srtEnFiles = fields.srtEn || [];
       const srtZhFiles = fields.srtZh || [];
+      const existingVideoName = (fields.videoFilename || '').trim();
 
-      if (Array.isArray(videoFiles) && videoFiles.length > 0 && videoFiles[0].body) {
+      const hasUploadedVideo = Array.isArray(videoFiles) && videoFiles.length > 0 && videoFiles[0].body && videoFiles[0].body.length > 0;
+      const hasExistingVideo = existingVideoName.length > 0;
+
+      if (!hasUploadedVideo && !hasExistingVideo) {
+        res.statusCode = 400;
+        res.setHeader('Content-Type', 'application/json; charset=utf-8');
+        res.end(JSON.stringify({ error: '请填写服务器上已有视频文件名（大视频请先用 scp 传到服务器 videos/ 目录）' }));
+        return;
+      }
+
+      let prefix;
+      let videoUrl;
+
+      if (hasUploadedVideo) {
+        prefix = 'episode_' + index;
         const ext = path.extname(videoFiles[0].filename) || '.mp4';
+        videoUrl = 'videos/' + prefix + ext;
         const videoPath = path.join(VIDEOS_DIR, prefix + ext);
         fs.writeFileSync(videoPath, videoFiles[0].body);
+      } else {
+        const basename = path.basename(existingVideoName).replace(/\.\./g, '');
+        if (!basename) {
+          res.statusCode = 400;
+          res.setHeader('Content-Type', 'application/json; charset=utf-8');
+          res.end(JSON.stringify({ error: '视频文件名无效' }));
+          return;
+        }
+        const videoPath = path.join(VIDEOS_DIR, basename);
+        if (!fs.existsSync(videoPath) || !fs.statSync(videoPath).isFile()) {
+          res.statusCode = 400;
+          res.setHeader('Content-Type', 'application/json; charset=utf-8');
+          res.end(JSON.stringify({ error: '服务器上未找到视频文件：' + basename + '，请先用 scp 上传到 videos/ 目录' }));
+          return;
+        }
+        prefix = path.basename(basename, path.extname(basename));
+        videoUrl = 'videos/' + basename;
       }
+
       if (Array.isArray(srtEnFiles) && srtEnFiles.length > 0) {
         const srtPath = path.join(SUBTITLES_DIR, prefix + '.en.srt');
         fs.writeFileSync(srtPath, srtEnFiles[0].bodyString || srtEnFiles[0].body.toString('utf8'), 'utf8');
@@ -156,12 +190,11 @@ const server = http.createServer((req, res) => {
         fs.writeFileSync(srtPath, srtZhFiles[0].bodyString || srtZhFiles[0].body.toString('utf8'), 'utf8');
       }
 
-      const videoExt = path.extname((videoFiles[0] && videoFiles[0].filename) || '') || '.mp4';
       const subtitleText = (fields.subtitle || '').trim();
       const episode = {
         title: title || '第' + (index + 1) + '集',
         subtitle: subtitleText || title,
-        videoUrl: 'videos/' + prefix + videoExt,
+        videoUrl,
         subtitles: { en: 'subtitles/' + prefix + '.en.srt' },
         subtitleMode: 'en',
       };

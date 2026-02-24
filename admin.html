@@ -25,6 +25,7 @@
     .edit-wrap h2 { margin-top: 0; }
     .current-file { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.2rem; }
     .hint { font-size: 0.8rem; color: var(--text-muted); }
+    .hint code { background: var(--border); padding: 0.1em 0.3em; border-radius: 4px; }
     .status { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem; }
     .status.err { color: #b54; }
     .status.ok { color: #5a7; }
@@ -35,7 +36,7 @@
 <body>
   <div id="app" class="admin-page">
     <h1>EchoLine 管理端</h1>
-    <p class="subtitle">一集一集上传，字幕用 Subtitle Edit 调好后上传。保存后用户端立即可见。</p>
+    <p class="subtitle">大视频请先用 scp 上传到服务器 videos/ 目录，再在此填写文件名并上传字幕，保存后用户端立即可见。</p>
 
     <section class="admin-section">
       <h2>添加一集</h2>
@@ -49,8 +50,9 @@
           <input type="text" id="add-subtitle" placeholder="The One Where..." />
         </div>
         <div class="form-row">
-          <label>视频文件</label>
-          <input type="file" id="add-video" accept="video/*" required />
+          <label>服务器上已有视频文件名</label>
+          <p class="hint">先用 scp 将 MP4 传到服务器 <code>videos/</code> 目录，再在此填写文件名（如 episode_0.mp4）。</p>
+          <input type="text" id="add-video-filename" placeholder="episode_0.mp4" />
         </div>
         <div class="form-row">
           <label>英文字幕 SRT</label>
@@ -60,7 +62,7 @@
           <label>中文字幕 SRT（可选）</label>
           <input type="file" id="add-srt-zh" accept=".srt,text/plain" />
         </div>
-        <button type="submit" class="btn" id="add-btn">上传并发布</button>
+        <button type="submit" class="btn" id="add-btn">上传字幕并发布</button>
       </form>
       <p id="add-status" class="status"></p>
     </section>
@@ -126,11 +128,16 @@
         e.preventDefault();
         var status = document.getElementById('add-status');
         var title = document.getElementById('add-title').value.trim() || '新剧集';
-        var videoInput = document.getElementById('add-video');
+        var videoFilename = document.getElementById('add-video-filename').value.trim();
         var srtEnInput = document.getElementById('add-srt-en');
         var srtZhInput = document.getElementById('add-srt-zh');
-        if (!videoInput.files.length || !srtEnInput.files.length) {
-          status.textContent = '请选择视频和英文字幕文件。';
+        if (!videoFilename) {
+          status.textContent = '请填写服务器上已有视频文件名（如 episode_0.mp4）。';
+          status.className = 'status err';
+          return;
+        }
+        if (!srtEnInput.files.length) {
+          status.textContent = '请选择英文字幕文件。';
           status.className = 'status err';
           return;
         }
@@ -138,10 +145,10 @@
         var fd = new FormData();
         fd.append('title', title);
         if (subtitle) fd.append('subtitle', subtitle);
-        fd.append('video', videoInput.files[0]);
+        fd.append('videoFilename', videoFilename);
         fd.append('srtEn', srtEnInput.files[0]);
         if (srtZhInput.files.length) fd.append('srtZh', srtZhInput.files[0]);
-        status.textContent = '上传中…';
+        status.textContent = '上传字幕中…';
         status.className = 'status';
         var xhr = new XMLHttpRequest();
         xhr.open('POST', API + '/episode');
@@ -151,12 +158,17 @@
             status.className = 'status ok';
             document.getElementById('add-title').value = '';
             document.getElementById('add-subtitle').value = '';
-            videoInput.value = '';
+            document.getElementById('add-video-filename').value = '';
             srtEnInput.value = '';
             srtZhInput.value = '';
             getEpisodes();
           } else {
-            status.textContent = '上传失败：' + (xhr.responseText || xhr.status);
+            var errMsg = xhr.responseText;
+            try {
+              var j = JSON.parse(xhr.responseText);
+              if (j.error) errMsg = j.error;
+            } catch (_) {}
+            status.textContent = '发布失败：' + errMsg;
             status.className = 'status err';
           }
         };
