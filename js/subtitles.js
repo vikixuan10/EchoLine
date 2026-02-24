@@ -30,6 +30,7 @@
 
   function parseSrt(content) {
     if (!content || typeof content !== 'string') return [];
+    content = content.replace(/^\uFEFF/, '');
     var blocks = content.split(/\n\s*\n/);
     var list = [];
     for (var i = 0; i < blocks.length; i++) {

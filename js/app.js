@@ -62,7 +62,12 @@
 
       var thumbDiv = document.createElement('div');
       thumbDiv.className = 'episode-thumb';
-      thumbDiv.dataset.videoUrl = ep.videoUrl || '';
+      if (ep.thumbUrl) {
+        thumbDiv.style.backgroundImage = 'url(' + ep.thumbUrl + ')';
+        thumbDiv.classList.add('loaded');
+      } else {
+        thumbDiv.dataset.videoUrl = ep.videoUrl || '';
+      }
 
       var info = document.createElement('div');
       info.className = 'episode-info';
@@ -77,7 +82,7 @@
       });
       li.appendChild(a);
       episodeListEl.appendChild(li);
-      if (ep.videoUrl) thumbTargets.push(thumbDiv);
+      if (!ep.thumbUrl && ep.videoUrl) thumbTargets.push(thumbDiv);
     });
     lazyLoadThumbnails(thumbTargets);
   }

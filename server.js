@@ -7,6 +7,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const url = require('url');
+const { execSync } = require('child_process');
 
 const PORT = 3000;
 const ROOT = path.join(__dirname);
@@ -22,6 +23,9 @@ const MIME = {
   '.json': 'application/json; charset=utf-8',
   '.srt': 'text/plain; charset=utf-8',
   '.mp4': 'video/mp4',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.png': 'image/png',
   '.ico': 'image/x-icon',
 };
 
@@ -42,6 +46,23 @@ function getEpisodes() {
 
 function saveEpisodes(list) {
   fs.writeFileSync(EPISODES_JSON, JSON.stringify(list, null, 2), 'utf8');
+}
+
+function generateThumbnail(videoRelPath) {
+  const videoAbsPath = path.join(ROOT, videoRelPath);
+  if (!fs.existsSync(videoAbsPath)) return null;
+  const base = path.basename(videoRelPath, path.extname(videoRelPath));
+  const thumbName = base + '_thumb.jpg';
+  const thumbRelPath = 'videos/' + thumbName;
+  const thumbAbsPath = path.join(VIDEOS_DIR, thumbName);
+  try {
+    execSync(
+      `ffmpeg -y -ss 2 -i "${videoAbsPath}" -vf "thumbnail=300" -frames:v 1 "${thumbAbsPath}"`,
+      { timeout: 60000, stdio: 'pipe' }
+    );
+    if (fs.existsSync(thumbAbsPath)) return thumbRelPath;
+  } catch (_) {}
+  return null;
 }
 
 function getBoundary(contentType) {
@@ -201,6 +222,8 @@ const server = http.createServer((req, res) => {
       if (Array.isArray(srtZhFiles) && srtZhFiles.length > 0) {
         episode.subtitles.zh = 'subtitles/' + prefix + '.zh.srt';
       }
+      const thumbUrl = generateThumbnail(episode.videoUrl);
+      if (thumbUrl) episode.thumbUrl = thumbUrl;
       episodes.push(episode);
       saveEpisodes(episodes);
 
@@ -223,6 +246,7 @@ const server = http.createServer((req, res) => {
     const ep = episodes[index];
     const tryDel = (p) => { try { if (p && fs.existsSync(path.join(ROOT, p))) fs.unlinkSync(path.join(ROOT, p)); } catch (_) {} };
     tryDel(ep.videoUrl);
+    tryDel(ep.thumbUrl);
     if (ep.subtitles) {
       tryDel(ep.subtitles.en);
       tryDel(ep.subtitles.zh);
@@ -286,6 +310,8 @@ const server = http.createServer((req, res) => {
         const videoPath = path.join(VIDEOS_DIR, prefix + ext);
         fs.writeFileSync(videoPath, videoFiles[0].body);
         ep.videoUrl = 'videos/' + prefix + ext;
+        const newThumb = generateThumbnail(ep.videoUrl);
+        if (newThumb) ep.thumbUrl = newThumb;
       }
 
       const srtEnFiles = fields.srtEn || [];
@@ -310,6 +336,23 @@ const server = http.createServer((req, res) => {
       res.setHeader('Access-Control-Allow-Origin', '*');
       res.end(JSON.stringify({ ok: true, episode: ep }));
     });
+    return;
+  }
+
+  // API: POST /api/generate-thumbnails — 为所有剧集批量生成缩略图
+  if (pathname === '/api/generate-thumbnails' && req.method === 'POST') {
+    const episodes = getEpisodes();
+    let count = 0;
+    episodes.forEach((ep) => {
+      if (ep.videoUrl) {
+        const thumbUrl = generateThumbnail(ep.videoUrl);
+        if (thumbUrl) { ep.thumbUrl = thumbUrl; count++; }
+      }
+    });
+    saveEpisodes(episodes);
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.end(JSON.stringify({ ok: true, generated: count, total: episodes.length }));
     return;
   }
 
