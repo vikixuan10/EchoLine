@@ -44,6 +44,12 @@
     video.addEventListener('timeupdate', callback);
   }
 
+  function formatTimestamp(seconds) {
+    var m = Math.floor(seconds / 60);
+    var s = Math.floor(seconds % 60);
+    return (m < 10 ? '0' + m : String(m)) + ':' + (s < 10 ? '0' + s : String(s));
+  }
+
   function renderSubtitles(items, mode) {
     mode = mode || 'en';
     subtitleListEl.innerHTML = '';
@@ -57,11 +63,12 @@
       div.dataset.start = item.start;
       div.dataset.end = item.end;
       var text = getText(item, mode);
+      var tsHtml = '<span class="timestamp">' + formatTimestamp(item.start) + '</span>';
       if (text.indexOf('\n') !== -1) {
         var parts = text.split('\n');
-        div.innerHTML = '<span class="text">' + escapeHtml(parts[0]) + '</span><span class="text-zh">' + escapeHtml(parts[1] || '') + '</span>';
+        div.innerHTML = tsHtml + '<span class="text">' + escapeHtml(parts[0]) + '</span><span class="text-zh">' + escapeHtml(parts[1] || '') + '</span>';
       } else {
-        div.innerHTML = '<span class="text">' + escapeHtml(text) + '</span>';
+        div.innerHTML = tsHtml + '<span class="text">' + escapeHtml(text) + '</span>';
       }
       subtitleListEl.appendChild(div);
     });
@@ -83,7 +90,7 @@
   function scrollToIndex(index) {
     var lines = subtitleListEl.querySelectorAll('.subtitle-line');
     var el = lines[index];
-    if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
   }
 
   if (speedSelect) initSpeedSelect();

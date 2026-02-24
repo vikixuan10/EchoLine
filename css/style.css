@@ -293,6 +293,9 @@ html, body {
   border-radius: 8px;
   cursor: pointer;
   transition: background 0.15s;
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
   border: 1px solid transparent;
 }
 
@@ -305,16 +308,30 @@ html, body {
   border-color: var(--accent-soft);
 }
 
+.subtitle-line .timestamp {
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  opacity: 0.45;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  min-width: 2.8em;
+  user-select: none;
+}
+
 .subtitle-line .text {
   font-size: 1.05rem;
   line-height: 1.5;
   color: var(--text);
+  flex: 1;
+  min-width: 0;
 }
 
 .subtitle-line .text-zh {
   font-size: 0.95rem;
   color: var(--text-muted);
   margin-top: 0.25rem;
+  display: block;
 }
 
 .subtitle-line.loop-a {

@@ -1,0 +1,21 @@
+---
+description: 每次修改代码后自动更新 CONTEXT-NEW-SESSION.md
+alwaysApply: true
+---
+
+# 自动维护 CONTEXT-NEW-SESSION.md
+
+每次对以下文件做实质性修改后，必须同步更新 `CONTEXT-NEW-SESSION.md` 的相关章节：
+
+- `server.js` → 更新「二、当前代码功能状态」中的 API/服务端功能描述
+- `admin.html` → 更新「二、当前代码功能状态」中的管理端描述
+- `js/app.js`、`js/subtitles.js`、`js/player.js`、`js/subtitle-sync.js` → 更新用户端功能描述
+- 任何 Nginx 配置 → 更新「三、部署状态」中的 Nginx 小节
+- 任何部署操作 → 更新「三、部署状态」
+
+## 更新规则
+
+1. 只更新改动涉及的章节，不要重写整个文件
+2. 保持文件中文简体、简洁、可操作
+3. 若新增了待做事项，追加到「五、后续待做事项」
+4. 若完成了待做事项，从列表中删除对应条目
