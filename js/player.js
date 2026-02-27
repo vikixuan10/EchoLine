@@ -63,7 +63,7 @@
       div.dataset.start = item.start;
       div.dataset.end = item.end;
       var text = getText(item, mode);
-      var tsHtml = '<span class="timestamp">' + formatTimestamp(item.start) + '</span>';
+      var tsHtml = '<span class="timestamp">' + (index + 1) + '/' + items.length + '</span>';
       var innerHtml;
       if (text.indexOf('\n') !== -1) {
         var parts = text.split('\n');

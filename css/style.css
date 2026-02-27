@@ -315,6 +315,8 @@ html, body {
   opacity: 0.4;
   font-variant-numeric: tabular-nums;
   user-select: none;
+  min-width: 3.5em;
+  text-align: right;
 }
 
 .subtitle-line .text-wrap {
