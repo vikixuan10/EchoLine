@@ -24,6 +24,7 @@
 ### 用户端（index.html + js/）
 - 剧集列表：有 `thumbUrl` 时直接用图片（手机端正常）；否则回退 canvas 截帧（桌面端）。
 - 播放页：三态模式（正常/单句循环/AB 循环）；字幕下拉（英文/中文/双语）；已去掉「上一句/下一句」按钮。
+- **PWA 图标**：已配置 `manifest.json` + `icons/icon-192.png` + `icons/icon-512.png`，手机"添加到主屏幕"后显示自定义图标。
 
 ### 字幕解析（js/subtitles.js）
 - 已修复 UTF-8 BOM 导致第一句字幕不显示的问题。
