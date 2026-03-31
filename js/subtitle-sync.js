@@ -25,6 +25,9 @@
   var loopAIndex = -1;
   var loopBIndex = -1;
 
+  // iOS 检测（用于 seek 缓冲补偿）
+  var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+
   function findIndexByTime(time) {
     for (var i = 0; i < cues.length; i++) {
       if (time >= cues[i].start && time <= cues[i].end) return i;
@@ -67,7 +70,9 @@
   function goToIndex(index) {
     if (index < 0 || index >= cues.length) return;
     currentIndex = index;
-    player.seekTo(cues[index].start);
+    // iOS seek 后有缓冲延迟会吃掉开头几个词，提前 0.5 秒补偿
+    var seekTime = isIOS ? Math.max(0, cues[index].start - 0.5) : cues[index].start;
+    player.seekTo(seekTime);
     player.setCurrentIndex(index);
     player.scrollToIndex(index);
   }
@@ -159,6 +164,26 @@
     }
   }
 
+  // --- RAF 补充轮询（解决 iOS timeupdate 触发频率低导致字幕迟到的问题）---
+
+  var rafId = null;
+
+  function startRaf() {
+    if (rafId !== null) return;
+    function tick() {
+      updateHighlight();
+      rafId = requestAnimationFrame(tick);
+    }
+    rafId = requestAnimationFrame(tick);
+  }
+
+  function stopRaf() {
+    if (rafId !== null) {
+      cancelAnimationFrame(rafId);
+      rafId = null;
+    }
+  }
+
   // --- Init ---
 
   function init(cuesList) {
@@ -174,6 +199,16 @@
     }
     if (player && player.onTimeUpdate) {
       player.onTimeUpdate(updateHighlight);
+    }
+
+    // 播放时启动 RAF 轮询，暂停/结束时停止
+    if (player && player.video) {
+      player.video.removeEventListener('play', startRaf);
+      player.video.removeEventListener('pause', stopRaf);
+      player.video.removeEventListener('ended', stopRaf);
+      player.video.addEventListener('play', startRaf);
+      player.video.addEventListener('pause', stopRaf);
+      player.video.addEventListener('ended', stopRaf);
     }
 
     if (btnModeNormal) {

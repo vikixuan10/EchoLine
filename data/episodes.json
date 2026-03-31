@@ -20,5 +20,27 @@
     },
     "subtitleMode": "en",
     "thumbUrl": "videos/1016_thumb.jpg"
+  },
+  {
+    "title": "S10E17",
+    "subtitle": "The Last One - Part 1",
+    "videoUrl": "videos/1017.mp4",
+    "subtitles": {
+      "en": "subtitles/1017.en.srt",
+      "zh": "subtitles/1017.zh.srt"
+    },
+    "subtitleMode": "en",
+    "thumbUrl": "videos/1017_thumb.jpg"
+  },
+  {
+    "title": "S10E18",
+    "subtitle": "The Last One - Part 2",
+    "videoUrl": "videos/1018.mp4",
+    "subtitles": {
+      "en": "subtitles/1018.en.srt",
+      "zh": "subtitles/1018.zh.srt"
+    },
+    "subtitleMode": "en",
+    "thumbUrl": "videos/1018_thumb.jpg"
   }
 ]
