@@ -1,21 +1,24 @@
 [
   {
-    "title": "S10E15 视频有字幕版",
+    "title": "S10E15",
     "subtitle": "The One Where Estelle Dies",
-    "videoUrl": "videos/episode_0.mp4",
+    "videoUrl": "videos/1015.mp4",
     "subtitles": {
-      "en": "subtitles/episode_0.en.srt"
+      "en": "subtitles/1015.en.srt",
+      "zh": "subtitles/episode_0.zh.srt"
     },
-    "subtitleMode": "en"
+    "subtitleMode": "en",
+    "thumbUrl": "videos/1015_thumb.jpg"
   },
   {
-    "title": "S10E15 视频无字幕版",
-    "subtitle": "S10E15 视频无字幕版",
-    "videoUrl": "videos/episode_1.mp4",
+    "title": "S10E16",
+    "subtitle": "The One with Rachel's Going Away Party",
+    "videoUrl": "videos/1016.mp4",
     "subtitles": {
       "en": "subtitles/episode_1.en.srt",
       "zh": "subtitles/episode_1.zh.srt"
     },
-    "subtitleMode": "en"
+    "subtitleMode": "en",
+    "thumbUrl": "videos/1016_thumb.jpg"
   }
 ]
