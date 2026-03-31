@@ -42,5 +42,16 @@
     },
     "subtitleMode": "en",
     "thumbUrl": "videos/1018_thumb.jpg"
+  },
+  {
+    "title": "S10E14",
+    "subtitle": "The One with Princess Consuela",
+    "videoUrl": "videos/1014.mp4",
+    "subtitles": {
+      "en": "subtitles/1014.en.srt",
+      "zh": "subtitles/1014.zh.srt"
+    },
+    "subtitleMode": "en",
+    "thumbUrl": "videos/1014_thumb.jpg"
   }
 ]
