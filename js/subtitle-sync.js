@@ -27,6 +27,7 @@
 
   // iOS 检测（用于 seek 缓冲补偿）
   var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  var seekLockIndex = -1; // 点击字幕后锁定高亮到目标索引，直到播放到达该字幕
 
   function findIndexByTime(time) {
     for (var i = 0; i < cues.length; i++) {
@@ -41,6 +42,15 @@
   function updateHighlight() {
     if (!player || cues.length === 0) return;
     var time = player.getCurrentTime();
+
+    // 点击字幕后，锁定高亮直到播放位置到达目标字幕
+    if (seekLockIndex >= 0) {
+      if (time >= cues[seekLockIndex].start) {
+        seekLockIndex = -1; // 已到达，解除锁定
+      } else {
+        return; // 未到达，保持高亮不动
+      }
+    }
 
     if (mode === 'single' && currentIndex >= 0) {
       if (time > cues[currentIndex].end + 0.15) {
@@ -72,6 +82,7 @@
     currentIndex = index;
     // iOS seek 后有缓冲延迟会吃掉开头几个词，提前 0.5 秒补偿
     var seekTime = isIOS ? Math.max(0, cues[index].start - 0.5) : cues[index].start;
+    if (isIOS) seekLockIndex = index; // 锁定高亮到目标字幕
     player.seekTo(seekTime);
     player.setCurrentIndex(index);
     player.scrollToIndex(index);
