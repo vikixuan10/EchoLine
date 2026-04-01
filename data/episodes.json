@@ -53,5 +53,16 @@
     },
     "subtitleMode": "en",
     "thumbUrl": "videos/1014_thumb.jpg"
+  },
+  {
+    "title": "1013",
+    "subtitle": "The One Where Joey Speaks French",
+    "videoUrl": "videos/1013.mp4",
+    "subtitles": {
+      "en": "subtitles/1013.en.srt",
+      "zh": "subtitles/1013.zh.srt"
+    },
+    "subtitleMode": "en",
+    "thumbUrl": "videos/1013_thumb.jpg"
   }
 ]
