@@ -33,8 +33,9 @@
         episodes = [];
       }
       episodes.sort(function (a, b) {
-        var na = parseInt(a.title, 10);
-        var nb = parseInt(b.title, 10);
+        // 提取标题中的数字部分排序（如 S10E14 → 1014）
+        var na = parseInt((a.title.match(/\d+/g) || []).join(''), 10);
+        var nb = parseInt((b.title.match(/\d+/g) || []).join(''), 10);
         return (isNaN(na) ? Infinity : na) - (isNaN(nb) ? Infinity : nb);
       });
       renderEpisodeList();

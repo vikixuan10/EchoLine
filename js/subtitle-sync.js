@@ -25,6 +25,10 @@
   var loopAIndex = -1;
   var loopBIndex = -1;
 
+  // iOS 检测（用于 seek 缓冲补偿）
+  var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  var seekLockIndex = -1; // 点击字幕后锁定高亮到目标索引，直到播放到达该字幕
+
   function findIndexByTime(time) {
     for (var i = 0; i < cues.length; i++) {
       if (time >= cues[i].start && time <= cues[i].end) return i;
@@ -38,6 +42,15 @@
   function updateHighlight() {
     if (!player || cues.length === 0) return;
     var time = player.getCurrentTime();
+
+    // 点击字幕后，锁定高亮直到播放位置到达目标字幕
+    if (seekLockIndex >= 0) {
+      if (time >= cues[seekLockIndex].start) {
+        seekLockIndex = -1; // 已到达，解除锁定
+      } else {
+        return; // 未到达，保持高亮不动
+      }
+    }
 
     if (mode === 'single' && currentIndex >= 0) {
       if (time > cues[currentIndex].end + 0.15) {
@@ -67,7 +80,10 @@
   function goToIndex(index) {
     if (index < 0 || index >= cues.length) return;
     currentIndex = index;
-    player.seekTo(cues[index].start);
+    // iOS seek 后有缓冲延迟会吃掉开头几个词，提前 0.5 秒补偿
+    var seekTime = isIOS ? Math.max(0, cues[index].start - 0.5) : cues[index].start;
+    if (isIOS) seekLockIndex = index; // 锁定高亮到目标字幕
+    player.seekTo(seekTime);
     player.setCurrentIndex(index);
     player.scrollToIndex(index);
   }
@@ -159,6 +175,26 @@
     }
   }
 
+  // --- RAF 补充轮询（解决 iOS timeupdate 触发频率低导致字幕迟到的问题）---
+
+  var rafId = null;
+
+  function startRaf() {
+    if (rafId !== null) return;
+    function tick() {
+      updateHighlight();
+      rafId = requestAnimationFrame(tick);
+    }
+    rafId = requestAnimationFrame(tick);
+  }
+
+  function stopRaf() {
+    if (rafId !== null) {
+      cancelAnimationFrame(rafId);
+      rafId = null;
+    }
+  }
+
   // --- Init ---
 
   function init(cuesList) {
@@ -174,6 +210,16 @@
     }
     if (player && player.onTimeUpdate) {
       player.onTimeUpdate(updateHighlight);
+    }
+
+    // 播放时启动 RAF 轮询，暂停/结束时停止
+    if (player && player.video) {
+      player.video.removeEventListener('play', startRaf);
+      player.video.removeEventListener('pause', stopRaf);
+      player.video.removeEventListener('ended', stopRaf);
+      player.video.addEventListener('play', startRaf);
+      player.video.addEventListener('pause', stopRaf);
+      player.video.addEventListener('ended', stopRaf);
     }
 
     if (btnModeNormal) {

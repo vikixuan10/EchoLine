@@ -1,21 +1,200 @@
 [
   {
-    "title": "S10E15 视频有字幕版",
+    "title": "S10E15",
     "subtitle": "The One Where Estelle Dies",
-    "videoUrl": "videos/episode_0.mp4",
+    "videoUrl": "videos/1015.mp4",
     "subtitles": {
-      "en": "subtitles/episode_0.en.srt"
+      "en": "subtitles/1015.en.srt",
+      "zh": "subtitles/episode_0.zh.srt"
     },
-    "subtitleMode": "en"
+    "subtitleMode": "en",
+    "thumbUrl": "videos/1015_thumb.jpg"
   },
   {
-    "title": "S10E15 视频无字幕版",
-    "subtitle": "S10E15 视频无字幕版",
-    "videoUrl": "videos/episode_1.mp4",
+    "title": "S10E16",
+    "subtitle": "The One with Rachel's Going Away Party",
+    "videoUrl": "videos/1016.mp4",
     "subtitles": {
       "en": "subtitles/episode_1.en.srt",
       "zh": "subtitles/episode_1.zh.srt"
     },
-    "subtitleMode": "en"
+    "subtitleMode": "en",
+    "thumbUrl": "videos/1016_thumb.jpg"
+  },
+  {
+    "title": "S10E17",
+    "subtitle": "The Last One - Part 1",
+    "videoUrl": "videos/1017.mp4",
+    "subtitles": {
+      "en": "subtitles/1017.en.srt",
+      "zh": "subtitles/1017.zh.srt"
+    },
+    "subtitleMode": "en",
+    "thumbUrl": "videos/1017_thumb.jpg"
+  },
+  {
+    "title": "S10E18",
+    "subtitle": "The Last One - Part 2",
+    "videoUrl": "videos/1018.mp4",
+    "subtitles": {
+      "en": "subtitles/1018.en.srt",
+      "zh": "subtitles/1018.zh.srt"
+    },
+    "subtitleMode": "en",
+    "thumbUrl": "videos/1018_thumb.jpg"
+  },
+  {
+    "title": "S10E14",
+    "subtitle": "The One with Princess Consuela",
+    "videoUrl": "videos/1014.mp4",
+    "subtitles": {
+      "en": "subtitles/1014.en.srt",
+      "zh": "subtitles/1014.zh.srt"
+    },
+    "subtitleMode": "en",
+    "thumbUrl": "videos/1014_thumb.jpg"
+  },
+  {
+    "title": "S10E13",
+    "subtitle": "The One Where Joey Speaks French",
+    "videoUrl": "videos/1013.mp4",
+    "subtitles": {
+      "en": "subtitles/1013.en.srt",
+      "zh": "subtitles/1013.zh.srt"
+    },
+    "subtitleMode": "en",
+    "thumbUrl": "videos/1013_thumb.jpg"
+  },
+  {
+    "title": "S10E12",
+    "subtitle": "The One with Phoebe's Wedding",
+    "videoUrl": "videos/1012.mp4",
+    "subtitles": {
+      "en": "subtitles/1012.en.srt",
+      "zh": "subtitles/1012.zh.srt"
+    },
+    "subtitleMode": "en",
+    "thumbUrl": "videos/1012_thumb.jpg"
+  },
+  {
+    "title": "S10E11",
+    "subtitle": "The One Where the Stripper Cries",
+    "videoUrl": "videos/1011.mp4",
+    "subtitles": {
+      "en": "subtitles/1011.en.srt",
+      "zh": "subtitles/1011.zh.srt"
+    },
+    "subtitleMode": "en",
+    "thumbUrl": "videos/1011_thumb.jpg"
+  },
+  {
+    "title": "S10E10",
+    "subtitle": "The One Where Chandler Gets Caught",
+    "videoUrl": "videos/1010.mp4",
+    "subtitles": {
+      "en": "subtitles/1010.en.srt",
+      "zh": "subtitles/1010.zh.srt"
+    },
+    "subtitleMode": "en",
+    "thumbUrl": "videos/1010_thumb.jpg"
+  },
+  {
+    "title": "S10E09",
+    "subtitle": "The One with the Birth Mother",
+    "videoUrl": "videos/1009.mp4",
+    "subtitles": {
+      "en": "subtitles/1009.en.srt",
+      "zh": "subtitles/1009.zh.srt"
+    },
+    "subtitleMode": "en",
+    "thumbUrl": "videos/1009_thumb.jpg"
+  },
+  {
+    "title": "S10E08",
+    "subtitle": "The One with the Late Thanksgiving",
+    "videoUrl": "videos/1008.mp4",
+    "subtitles": {
+      "en": "subtitles/1008.en.srt",
+      "zh": "subtitles/1008.zh.srt"
+    },
+    "subtitleMode": "en",
+    "thumbUrl": "videos/1008_thumb.jpg"
+  },
+  {
+    "title": "S10E07",
+    "subtitle": "The One with the Home Study",
+    "videoUrl": "videos/1007.mp4",
+    "subtitles": {
+      "en": "subtitles/1007.en.srt",
+      "zh": "subtitles/1007.zh.srt"
+    },
+    "subtitleMode": "en",
+    "thumbUrl": "videos/1007_thumb.jpg"
+  },
+  {
+    "title": "S10E06",
+    "subtitle": "The One with Ross's Grant",
+    "videoUrl": "videos/1006.mp4",
+    "subtitles": {
+      "en": "subtitles/1006.en.srt",
+      "zh": "subtitles/1006.zh.srt"
+    },
+    "subtitleMode": "en",
+    "thumbUrl": "videos/1006_thumb.jpg"
+  },
+  {
+    "title": "S10E05",
+    "subtitle": "The One Where Rachel's Sister Babysits",
+    "videoUrl": "videos/1005.mp4",
+    "subtitles": {
+      "en": "subtitles/1005.en.srt",
+      "zh": "subtitles/1005.zh.srt"
+    },
+    "subtitleMode": "en",
+    "thumbUrl": "videos/1005_thumb.jpg"
+  },
+  {
+    "title": "S10E04",
+    "subtitle": "The One with the Cake",
+    "videoUrl": "videos/1004.mp4",
+    "subtitles": {
+      "en": "subtitles/1004.en.srt",
+      "zh": "subtitles/1004.zh.srt"
+    },
+    "subtitleMode": "en",
+    "thumbUrl": "videos/1004_thumb.jpg"
+  },
+  {
+    "title": "S10E03",
+    "subtitle": "The One with Ross' Tan",
+    "videoUrl": "videos/1003.mp4",
+    "subtitles": {
+      "en": "subtitles/1003.en.srt",
+      "zh": "subtitles/1003.zh.srt"
+    },
+    "subtitleMode": "en",
+    "thumbUrl": "videos/1003_thumb.jpg"
+  },
+  {
+    "title": "S10E02",
+    "subtitle": "The One Where Ross Is Fine",
+    "videoUrl": "videos/1002.mp4",
+    "subtitles": {
+      "en": "subtitles/1002.en.srt",
+      "zh": "subtitles/1002.zh.srt"
+    },
+    "subtitleMode": "en",
+    "thumbUrl": "videos/1002_thumb.jpg"
+  },
+  {
+    "title": "S10E01",
+    "subtitle": "The One After Joey and Rachel Kiss",
+    "videoUrl": "videos/1001.mp4",
+    "subtitles": {
+      "en": "subtitles/1001.en.srt",
+      "zh": "subtitles/1001.zh.srt"
+    },
+    "subtitleMode": "en",
+    "thumbUrl": "videos/1001_thumb.jpg"
   }
 ]
