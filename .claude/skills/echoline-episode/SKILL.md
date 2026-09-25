@@ -195,4 +195,4 @@ git checkout develop && git merge main && git push origin develop && git checkou
 - 字幕文件如果不是 ASS 格式（如已是 SRT），跳过解析步骤，直接从第二步开始
 - 中国版视频可能剪掉了部分片段。逐句对齐天然不受影响（每句独立定位），这正是弃用整集平移的原因
 - **每次处理完必须同步三个地方：本机项目目录、服务器、GitHub**
-- 本 skill 有两份副本：账号同步的 `~/.claude/skills/synced/*/echoline-episode/SKILL.md`（实际生效）和项目备份 `.claude/skills/echoline-episode.md`，改一处必须同步另一处
+- 本 skill 的唯一真源是项目仓库 `.claude/skills/echoline-episode/SKILL.md`（git 跟踪即备份），只在 EchoLine 目录下开的会话加载；不要再往 claude.ai 上传副本
