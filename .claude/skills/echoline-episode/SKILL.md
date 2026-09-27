@@ -170,11 +170,6 @@ git push origin main
 
 **三个地方必须全部同步：本机项目目录、服务器、GitHub。**
 
-提交到 main 后，记得同步 develop 分支：
-```bash
-git checkout develop && git merge main && git push origin develop && git checkout main
-```
-
 ## 工具依赖
 
 - `ffmpeg` / `ffprobe`：已安装（通过 Homebrew）
