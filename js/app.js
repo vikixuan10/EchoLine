@@ -171,6 +171,10 @@
       currentCues = cues;
       global.EchoLine.player.renderSubtitles(cues, getSubtitleMode());
       global.EchoLine.subtitleSync.init(cues);
+      // 初始化跟读模块
+      if (global.EchoLine.shadowing) {
+        global.EchoLine.shadowing.init(cues);
+      }
     });
   }
 
@@ -223,14 +227,26 @@
       backToList.addEventListener('click', function (e) {
         e.preventDefault();
         if (video) video.pause();
+        // 重置跟读模块（释放麦克风等资源）
+        if (global.EchoLine.shadowing) {
+          global.EchoLine.shadowing.reset();
+        }
         showPage('episode-list-page');
       });
     }
     if (subtitleModeSelect) {
       subtitleModeSelect.addEventListener('change', function () {
         if (currentCues.length > 0) {
+          // 重置跟读模块（renderSubtitles 会重建 DOM，面板会丢失）
+          if (global.EchoLine.shadowing) {
+            global.EchoLine.shadowing.reset();
+          }
           global.EchoLine.player.renderSubtitles(currentCues, getSubtitleMode());
           global.EchoLine.subtitleSync.init(currentCues);
+          // 重新初始化跟读模块（reset 会清空 cues，需要重新传入）
+          if (global.EchoLine.shadowing) {
+            global.EchoLine.shadowing.init(currentCues);
+          }
         }
       });
     }

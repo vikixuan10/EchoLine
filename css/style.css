@@ -167,6 +167,7 @@ html, body {
   width: 100%;
   background: #1a1a1a;
   max-height: 45vh;
+  overflow: hidden;
 }
 
 #video {
@@ -188,12 +189,13 @@ html, body {
 
 .mode-buttons {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.35rem;
 }
 
 .mode-btn {
-  padding: 0.4rem 0.7rem;
-  font-size: 0.85rem;
+  padding: 0.35rem 0.45rem;
+  font-size: 0.78rem;
+  white-space: nowrap;
   color: var(--text);
   background: var(--bg-card);
   border: 1px solid var(--border);
@@ -358,4 +360,84 @@ html, body {
   color: #557ac5;
   font-weight: 700;
   font-size: 0.8em;
+}
+
+/* ---------- 跟读功能 ---------- */
+
+/* 跟读按钮激活态：与其他模式按钮颜色一致 */
+
+/* 字幕行展开状态 */
+.subtitle-line.shadowing-expanded {
+  background: var(--highlight);
+  border-color: var(--accent-soft);
+}
+
+/* 跟读面板：展开后出现在字幕文字下方（在 .text-wrap 内部） */
+.shadowing-panel {
+  padding: 0.5rem 0 0.2rem;
+  margin-top: 0.4rem;
+  border-top: 1px solid var(--border);
+}
+
+.shadowing-buttons {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.shadowing-btn {
+  padding: 0.4rem 0.8rem;
+  min-height: 2.2rem;
+  font-size: 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-card);
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.shadowing-btn:active {
+  background: var(--highlight);
+}
+
+/* 录音中按钮变红 */
+.shadowing-btn.recording {
+  background: #e74c3c;
+  color: #fff;
+  border-color: #e74c3c;
+}
+
+.shadowing-btn.recording:active {
+  background: #c0392b;
+}
+
+/* 录音指示器：红点脉冲动画 */
+.recording-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 0.4rem;
+  font-size: 0.8rem;
+  color: #e74c3c;
+}
+
+.rec-dot {
+  width: 8px;
+  height: 8px;
+  background: #e74c3c;
+  border-radius: 50%;
+  animation: rec-pulse 1s infinite;
+}
+
+@keyframes rec-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* 不支持录音时的提示文字 */
+.shadowing-unsupported {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  padding: 0.3rem 0;
 }

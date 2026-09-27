@@ -52,6 +52,17 @@
       }
     }
 
+    // 跟读模式展开时，高亮锁定在展开的那一句，不随播放时间变化
+    var shadowing = global.EchoLine && global.EchoLine.shadowing;
+    var shadowingExpandedIdx = shadowing ? shadowing.getExpandedIndex() : -1;
+    if (shadowingExpandedIdx >= 0) {
+      if (currentIndex !== shadowingExpandedIdx) {
+        currentIndex = shadowingExpandedIdx;
+        player.setCurrentIndex(shadowingExpandedIdx);
+      }
+      return;
+    }
+
     if (mode === 'single' && currentIndex >= 0) {
       if (time > cues[currentIndex].end + 0.15) {
         player.video.currentTime = cues[currentIndex].start;
@@ -93,6 +104,14 @@
     if (!line || !player) return;
     var index = parseInt(line.dataset.index, 10);
     if (isNaN(index)) return;
+
+    // 跟读模式：委托给 shadowing 模块处理
+    var shadowing = global.EchoLine && global.EchoLine.shadowing;
+    if (shadowing && shadowing.isActive()) {
+      shadowing.onSubtitleClick(index);
+      return;
+    }
+
     if (mode === 'single') {
       setMode('normal');
     } else if (mode === 'ab' && loopAIndex >= 0 && loopBIndex >= 0) {
@@ -111,6 +130,11 @@
 
   function setMode(m) {
     mode = m;
+    // 切换播放模式时，如果跟读模式在激活状态，自动关闭跟读
+    var shadowing = global.EchoLine && global.EchoLine.shadowing;
+    if (shadowing && shadowing.isActive()) {
+      shadowing.deactivate();
+    }
     if (btnModeNormal) btnModeNormal.classList.toggle('active', m === 'normal');
     if (btnModeSingle) btnModeSingle.classList.toggle('active', m === 'single');
     if (btnModeAb) btnModeAb.classList.toggle('active', m === 'ab');
