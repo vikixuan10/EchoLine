@@ -29,6 +29,53 @@
   var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
   var seekLockIndex = -1; // 点击字幕后锁定高亮到目标索引，直到播放到达该字幕
 
+  // 干净切句（试验中，URL 带 ?dev=1 才生效）：
+  // 1) 提前起跳的那一段静音，播到句首才出声，不再带进上一句的尾音
+  // 2) 循环时句尾不越过下一句的起点，跳回句首也走同样的静音预热
+  var urlParams = new URLSearchParams(window.location.search);
+  var cleanCut = urlParams.get('dev') === '1';
+  var leadParam = parseFloat(urlParams.get('lead')); // 试验用：?dev=1&lead=0.3 临时改提前量
+  var seekLead = (cleanCut && !isNaN(leadParam)) ? leadParam : (isIOS ? 0.5 : 0);
+  var TAIL_PAD = 0.15;      // 句尾留的余量
+  var UNMUTE_EARLY = 0.03;  // 比句首早一点点恢复声音，免得吃掉第一个音
+  var unmuteAt = -1;        // >= 0 表示正在静音预热，播到这个时间恢复声音
+  var mutedBefore = false;  // 预热前用户自己是否静音
+
+  // 这一句最晚播到哪：句尾留余量，但不越过下一句的起点
+  function cutEnd(index) {
+    var end = cues[index].end;
+    if (!cleanCut) return end + TAIL_PAD;
+    for (var j = index + 1; j < cues.length; j++) {
+      // 译注与正文同时间，跳过它找真正的下一句
+      if (cues[j].start >= end - 0.05) {
+        return Math.min(end + TAIL_PAD, Math.max(end, cues[j].start));
+      }
+    }
+    return end + TAIL_PAD;
+  }
+
+  // 跳到某句句首。isLoopBack 表示循环跳回（旧行为里循环跳回不提前）
+  function seekToCue(index, isLoopBack) {
+    var start = cues[index].start;
+    var lead = (!cleanCut && isLoopBack) ? 0 : seekLead;
+    var target = Math.max(0, start - lead);
+    if (cleanCut && target < start) {
+      if (unmuteAt < 0) mutedBefore = video.muted;
+      video.muted = true;
+      unmuteAt = start - UNMUTE_EARLY;
+    }
+    player.seekTo(target);
+  }
+
+  // 静音预热结束：播到句首恢复声音；用户自己把进度拖到别处也恢复
+  function restoreSoundIfDue(time) {
+    if (unmuteAt < 0) return;
+    if (time >= unmuteAt || time < unmuteAt - seekLead - 0.5) {
+      video.muted = mutedBefore;
+      unmuteAt = -1;
+    }
+  }
+
   function findIndexByTime(time) {
     for (var i = 0; i < cues.length; i++) {
       if (time >= cues[i].start && time <= cues[i].end) return i;
@@ -42,6 +89,7 @@
   function updateHighlight() {
     if (!player || cues.length === 0) return;
     var time = player.getCurrentTime();
+    restoreSoundIfDue(time);
 
     // 点击字幕后，锁定高亮直到播放位置到达目标字幕
     if (seekLockIndex >= 0) {
@@ -64,8 +112,8 @@
     }
 
     if (mode === 'single' && currentIndex >= 0) {
-      if (time > cues[currentIndex].end + 0.15) {
-        player.video.currentTime = cues[currentIndex].start;
+      if (time > cutEnd(currentIndex)) {
+        seekToCue(currentIndex, true);
       }
       return;
     }
@@ -82,8 +130,14 @@
     if (mode === 'ab' && loopAIndex >= 0 && loopBIndex >= 0) {
       var lo = Math.min(loopAIndex, loopBIndex);
       var hi = Math.max(loopAIndex, loopBIndex);
-      if (time > cues[hi].end + 0.15) {
-        player.video.currentTime = cues[lo].start;
+      if (time > cutEnd(hi)) {
+        if (cleanCut && seekLead > 0) {
+          // 提前起跳期间高亮先停在 A 句，免得闪到 A 的上一句
+          seekLockIndex = lo;
+          currentIndex = lo;
+          player.setCurrentIndex(lo);
+        }
+        seekToCue(lo, true);
       }
     }
   }
@@ -92,9 +146,8 @@
     if (index < 0 || index >= cues.length) return;
     currentIndex = index;
     // iOS seek 后有缓冲延迟会吃掉开头几个词，提前 0.5 秒补偿
-    var seekTime = isIOS ? Math.max(0, cues[index].start - 0.5) : cues[index].start;
-    if (isIOS) seekLockIndex = index; // 锁定高亮到目标字幕
-    player.seekTo(seekTime);
+    if (seekLead > 0) seekLockIndex = index; // 锁定高亮到目标字幕
+    seekToCue(index, false);
     player.setCurrentIndex(index);
     player.scrollToIndex(index);
   }
@@ -224,6 +277,11 @@
   function init(cuesList) {
     cues = cuesList || [];
     currentIndex = -1;
+    // 换集时若还停在静音预热里，先把声音还回去
+    if (unmuteAt >= 0 && video) {
+      video.muted = mutedBefore;
+      unmuteAt = -1;
+    }
     setMode('normal');
 
     if (subtitleListEl) {
