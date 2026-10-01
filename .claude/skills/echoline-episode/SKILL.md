@@ -10,16 +10,27 @@ description: EchoLine 剧集上线流程：处理老友记单集的字幕（ASS�
 ## 用户需要提供的信息
 
 开始前，确认以下信息（如果用户没说，主动询问）：
-- **集数编号**：如 `1017`（对应视频文件 `1017.mp4`）
-- **原始字幕文件**：用户会告诉你文件在哪、叫什么
+- **集数编号**：四位数，两位季号 + 两位集号，如 `0808`（第八季第 8 集）、`1017`（第十季第 17 集），对应视频文件 `{集数}.mp4`
+- **原始字幕文件**：通常在下方「文件路径约定」写的目录里，按约定的文件名去找；用户另有说明时以用户说的为准
   - 通常有两个：纯英文 ASS 和中英双语 ASS
   - 如果字幕包含多集（如 E17E18），需要知道要提取哪一集
 
 ## 文件路径约定
 
+各季通用。下文三个占位符都由集数编号推出：
+
+| 占位符 | 含义 | 第八季第 8 集 | 第十季第 17 集 |
+|------|------|------|------|
+| `{集数}` | 两位季号 + 两位集号，视频、字幕、缩略图的文件名都用它 | `0808` | `1017` |
+| `{季目录}` | `S` + 季号，不补零 | `S8` | `S10` |
+| `{季集号}` | `S` + 两位季号 + `E` + 两位集号 | `S08E08` | `S10E17` |
+
+`{Friends}` 代指 Google Drive 本机同步目录 `~/Library/CloudStorage/GoogleDrive-vikixuan10@gmail.com/我的云端硬盘/Friends`。
+
 | 类型 | 路径 |
 |------|------|
-| 视频 | `~/Library/CloudStorage/GoogleDrive-vikixuan10@gmail.com/我的云端硬盘/Friends/S10/{集数}.mp4`（Google Drive 本机同步目录；旧路径 `~/Documents/Videos/S10/` 已不存在） |
+| 视频 | `{Friends}/{季目录}/{集数}.mp4`，如 `{Friends}/S8/0808.mp4`（旧路径 `~/Documents/Videos/S10/` 已不存在） |
+| 原始字幕 | `{Friends}/Subtitle/Original/Friends.{季集号}.chs&eng.ass`（中英双语）和 `Friends.{季集号}.eng.ass`（纯英文），如 `Friends.S08E08.chs&eng.ass`。个别集命名不同（如合集 `Friends.S10E17E18.*.ass`），以目录里实际有的文件为准 |
 | 转写与对齐中间产物 | `/tmp/whisper_batch/{集数}/`（whisper JSON）和 `/tmp/whisper_batch/out/{集数}/`（对齐后的 SRT 与报告） |
 | 项目字幕（Git 跟踪，也是最终真源） | `~/Documents/PROJECTS/EchoLine/subtitles/{集数}.en.srt` 和 `.zh.srt` |
 | 对齐工具 | `~/Documents/PROJECTS/EchoLine/tools/align_subtitles.py`（单集）、`tools/batch_align.sh`（按 episodes.json 批量重对齐已上架的集） |
@@ -28,16 +39,22 @@ description: EchoLine 剧集上线流程：处理老友记单集的字幕（ASS�
 
 下文用 `$VIDEO` 代指视频完整路径：
 ```bash
-VIDEO="$HOME/Library/CloudStorage/GoogleDrive-vikixuan10@gmail.com/我的云端硬盘/Friends/S10/{集数}.mp4"
+VIDEO="$HOME/Library/CloudStorage/GoogleDrive-vikixuan10@gmail.com/我的云端硬盘/Friends/{季目录}/{集数}.mp4"
 ```
 
 ## 执行步骤
 
 ### 第一步：解析字幕文件
 
-ASS 文件编码不固定，需要自动检测。用 Python 按以下顺序尝试：`utf-16 → utf-8-sig → utf-8 → gbk → gb2312 → latin-1`，以能成功解析出 Dialogue 行的为准。
+ASS 文件编码不固定，需要自动检测。用 Python 先读文件开头的 BOM：
 
-> 已知特例：S10E12 的 chs&eng.ass 是 **GBK 编码**，必须包含 gbk 才能正确解析。
+- 开头是 `FF FE` 或 `FE FF`：UTF-16，用 `utf-16` 解码
+- 开头是 `EF BB BF`：带 BOM 的 UTF-8，用 `utf-8-sig` 解码
+- 没有 BOM：按 `utf-8 → gbk → gb2312 → latin-1` 依次尝试，以能成功解析出 Dialogue 行的为准
+
+> 不要一上来就试 `utf-16`：带 BOM 的 UTF-8 文件按 utf-16 解码不一定报错，文件字节数恰为偶数时会顺利解出一堆乱码，所以必须先看 BOM。
+>
+> 已知特例：S10E12 的 chs&eng.ass 是 **GBK 编码**（无 BOM），必须包含 gbk 才能正确解析。
 
 **判断是否为多集合并文件：**
 先用 ffprobe 获取视频时长（秒），以此为截取上限：
@@ -55,13 +72,15 @@ ffprobe -v quiet -show_entries format=duration -of csv=p=0 "$VIDEO"
 - 过滤时间戳超过视频时长的行
 - 去除 ASS 格式标签 `{...}`，处理 `\N`（换行）
 - 时间格式从 `H:MM:SS.cc` 转为 SRT 格式 `HH:MM:SS,mmm`
+- 英文 ASS 里夹的中文译注（如 `[《爸爸别说教》: 麦当娜歌曲…]`、片名行）原样保留在英文轨里，不删、不挪到中文轨；对齐脚本会按邻句推算它们的时间（报告里状态为 note）
 
 **解析中英双语 ASS → 中文 SRT：**
 每行文本结构：`{样式}中文{\r}\N{样式}English`
 - 取 `{\r}\N` 之前的部分作为中文
 - 同样去除格式标签
+- 不用双语 ASS 自己的时间：它通常比纯英文 ASS 统一晚 0.10 秒（S08E08、S10E01、S10E05 实测逐句如此）。每句中文直接套用对应英文句的时间码（双语行 `\N` 后面带着英文原句，可据此配对）
 
-输出到 `/tmp/{集数}.en.srt` 和 `/tmp/{集数}.zh.srt`。**中文 SRT 的时间码必须与英文一一相同**（对齐时中文靠旧开始时间去找对应英文句）。
+输出到 `/tmp/{集数}.en.srt` 和 `/tmp/{集数}.zh.srt`。**中文 SRT 的时间码必须与英文一一相同**（对齐时中文靠旧开始时间去找对应英文句，容差只有 0.05 秒，差 0.10 秒就配不上）。
 
 验证：检查前5条和后5条内容，确认中英文分离正确。
 
@@ -121,16 +140,16 @@ done
 ffmpeg -y -ss {最亮时间} -i "$VIDEO" -vframes 1 /tmp/{集数}_thumb.jpg -loglevel quiet
 ```
 
-### 第五步：上传视频和缩略图到服务器
+### 第五步：上传视频到服务器
 
 ```bash
 scp "$VIDEO" ubuntu@3.252.132.90:~/EchoLine/videos/ && \
 ssh ubuntu@3.252.132.90 "chmod 644 ~/EchoLine/videos/{集数}.mp4"
-
-scp /tmp/{集数}_thumb.jpg ubuntu@3.252.132.90:~/EchoLine/videos/
 ```
 
 **chmod 644 是必须的**，不改权限视频无法播放。
+
+缩略图这一步先不传，等用户在后台上架之后再传（见第七步）。
 
 ### 第六步：字幕进项目目录并上传服务器
 
@@ -144,12 +163,24 @@ scp ~/Documents/PROJECTS/EchoLine/subtitles/{集数}.*.srt ubuntu@3.252.132.90:~
 ssh ubuntu@3.252.132.90 'cd ~/EchoLine/subtitles && for f in .incoming/*.srt; do mv -f "$f" "$(basename "$f")"; done; rmdir .incoming'
 ```
 
-### 第七步：告知用户上架信息并等待测试
+### 第七步：请用户上架，上架后传缩略图，再等待测试
 
 告知用户：
 1. **视频文件名**：`{集数}.mp4`（填入后台"服务器上已有视频文件名"）
-2. **副标题**：查询 Friends S10E{集号} 的英文标题
-3. 请用户在后台上架，然后在 iPhone 上测试字幕对齐效果，重点听第三步报告里「偏移超过 1 秒」的那几句
+2. **副标题**：查询 Friends {季集号} 的英文标题
+3. 请用户在后台上架，上架完说一声
+
+**用户确认已上架之后**，再把第四步选好的缩略图传上去：
+
+```bash
+scp /tmp/{集数}_thumb.jpg ubuntu@3.252.132.90:~/EchoLine/videos/
+```
+
+> 为什么必须在上架之后传：后台「添加一集」时，`server.js` 的 `generateThumbnail` 会用 ffmpeg 截视频第 5 秒的画面（固定时间点，不挑亮度），存成 `videos/{集数}_thumb.jpg`，与本地选的那张同名。上架前传上去的会被它覆盖；上架后再传，留在服务器上的才是本地选的那一帧。`episodes.json` 里的 `thumbUrl` 指向的就是这个文件名，不用改。
+>
+> 如果 `/tmp/{集数}_thumb.jpg` 已经不在（比如中间重启过），按第四步重新生成再传。
+
+缩略图传完后，请用户在 iPhone 上测试字幕对齐效果，重点听第三步报告里「偏移超过 1 秒」的那几句。
 
 **等待用户测试反馈。** 如果个别句子仍不准：打开 `{集数}.report.tsv` 找到那句，看它是 miss（推算）还是 strong，直接手改 `subtitles/` 里该句的时间码后重传。**不要再对整集加减固定偏移**，那会把已经对准的几百句一起带偏。
 
@@ -164,7 +195,7 @@ scp ubuntu@3.252.132.90:~/EchoLine/data/episodes.json ~/Documents/PROJECTS/EchoL
 # 提交并推送到 GitHub
 cd ~/Documents/PROJECTS/EchoLine
 git add data/episodes.json subtitles/{集数}.en.srt subtitles/{集数}.zh.srt
-git commit -m "feat: add S10E{集号} with per-sentence aligned subtitles"
+git commit -m "feat: add {季集号} with per-sentence aligned subtitles"   # 如 feat: add S08E08 with ...
 git push origin main
 ```
 
@@ -186,7 +217,7 @@ git push origin main
 - 上传大视频前先确认文件存在：`ls "$VIDEO"`
 - 上传视频可能需要几分钟，正常等待
 - Whisper 跑 medium 模型约 4 分钟一集，可在后台运行；批量时用终端标签跑，用户能看到进度
-- ASS 文件编码不固定，需自动检测（尝试 utf-16 → utf-8-sig → utf-8 → gbk）
+- ASS 文件编码不固定，需自动检测（先看 BOM，没有 BOM 再逐个尝试，顺序见第一步）
 - 字幕文件如果不是 ASS 格式（如已是 SRT），跳过解析步骤，直接从第二步开始
 - 中国版视频可能剪掉了部分片段。逐句对齐天然不受影响（每句独立定位），这正是弃用整集平移的原因
 - **每次处理完必须同步三个地方：本机项目目录、服务器、GitHub**
