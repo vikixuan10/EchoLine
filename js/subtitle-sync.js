@@ -36,10 +36,29 @@
   var cleanCut = urlParams.get('dev') === '1';
   var leadParam = parseFloat(urlParams.get('lead')); // 试验用：?dev=1&lead=0.3 临时改提前量
   var seekLead = (cleanCut && !isNaN(leadParam)) ? leadParam : (isIOS ? 0.5 : 0);
+  // iPhone 上「静音 / 出声」的指令要过约 0.3 秒才听得出效果（2026-10-01 实测：句首句尾都晚 0.3 秒），
+  // 所以两个指令都提前这么久发。试验用：?dev=1&ml=0.25 临时改这个数
+  var mlParam = parseFloat(urlParams.get('ml'));
+  var muteLatency = !cleanCut ? 0 : (!isNaN(mlParam) ? mlParam : (isIOS ? 0.3 : 0));
+  // 起跳提前量至少比指令延迟多 0.2 秒，保证「出声」指令发在跳转之后
+  if (muteLatency > 0) seekLead = Math.max(seekLead, muteLatency + 0.2);
   var TAIL_PAD = 0.15;      // 句尾留的余量
   var UNMUTE_EARLY = 0.03;  // 比句首早一点点恢复声音，免得吃掉第一个音
-  var unmuteAt = -1;        // >= 0 表示正在静音预热，播到这个时间恢复声音
-  var mutedBefore = false;  // 预热前用户自己是否静音
+  var unmuteAt = -1;        // >= 0 表示正在静音预热，播到这个时间发「出声」指令
+  var tailHoldEnd = -1;     // >= 0 表示句尾已提前静音，值是这一句真正的截止时间
+  var holding = false;      // 当前是否由我们按着静音
+  var mutedBefore = false;  // 我们按静音之前，用户自己是否静音
+
+  function holdSound() {
+    if (!holding) { mutedBefore = video.muted; holding = true; }
+    video.muted = true;
+  }
+
+  function releaseSound() {
+    if (holding) { video.muted = mutedBefore; holding = false; }
+    unmuteAt = -1;
+    tailHoldEnd = -1;
+  }
 
   // 这一句最晚播到哪：句尾留余量，但不越过下一句的起点
   function cutEnd(index) {
@@ -60,20 +79,36 @@
     var lead = (!cleanCut && isLoopBack) ? 0 : seekLead;
     var target = Math.max(0, start - lead);
     if (cleanCut && target < start) {
-      if (unmuteAt < 0) mutedBefore = video.muted;
-      video.muted = true;
-      unmuteAt = start - UNMUTE_EARLY;
+      holdSound();
+      tailHoldEnd = -1;
+      unmuteAt = start - UNMUTE_EARLY - muteLatency;
+    } else if (holding) {
+      releaseSound();
     }
     player.seekTo(target);
   }
 
-  // 静音预热结束：播到句首恢复声音；用户自己把进度拖到别处也恢复
+  // 该出声时出声：播到句首（扣掉指令延迟）恢复声音；用户自己把进度拖到别处也恢复
   function restoreSoundIfDue(time) {
-    if (unmuteAt < 0) return;
-    if (time >= unmuteAt || time < unmuteAt - seekLead - 0.5) {
-      video.muted = mutedBefore;
-      unmuteAt = -1;
+    if (unmuteAt >= 0) {
+      if (time >= unmuteAt || time < unmuteAt - seekLead - 0.5) releaseSound();
+    } else if (tailHoldEnd >= 0) {
+      // 句尾静音后本该马上跳回；若没跳（切了模式、拖了进度），别一直静音下去
+      if (time > tailHoldEnd + 0.3 || time < tailHoldEnd - muteLatency - 0.3) releaseSound();
     }
+  }
+
+  // 循环：播到句尾就跳回 startIndex 的句首，跳了返回 true。
+  // 句尾的「静音」指令提前发，真正到句尾再跳
+  function loopIfDue(time, endIndex, startIndex) {
+    var end = cutEnd(endIndex);
+    if (muteLatency > 0 && unmuteAt < 0 && tailHoldEnd < 0 && time > end - muteLatency && time <= end) {
+      holdSound();
+      tailHoldEnd = end;
+    }
+    if (time <= end) return false;
+    seekToCue(startIndex, true);
+    return true;
   }
 
   function findIndexByTime(time) {
@@ -112,9 +147,7 @@
     }
 
     if (mode === 'single' && currentIndex >= 0) {
-      if (time > cutEnd(currentIndex)) {
-        seekToCue(currentIndex, true);
-      }
+      loopIfDue(time, currentIndex, currentIndex);
       return;
     }
 
@@ -130,14 +163,11 @@
     if (mode === 'ab' && loopAIndex >= 0 && loopBIndex >= 0) {
       var lo = Math.min(loopAIndex, loopBIndex);
       var hi = Math.max(loopAIndex, loopBIndex);
-      if (time > cutEnd(hi)) {
-        if (cleanCut && seekLead > 0) {
-          // 提前起跳期间高亮先停在 A 句，免得闪到 A 的上一句
-          seekLockIndex = lo;
-          currentIndex = lo;
-          player.setCurrentIndex(lo);
-        }
-        seekToCue(lo, true);
+      if (loopIfDue(time, hi, lo) && cleanCut && seekLead > 0) {
+        // 提前起跳期间高亮先停在 A 句，免得闪到 A 的上一句
+        seekLockIndex = lo;
+        currentIndex = lo;
+        player.setCurrentIndex(lo);
       }
     }
   }
@@ -183,6 +213,8 @@
 
   function setMode(m) {
     mode = m;
+    // 句尾已提前静音但还没跳回时切了模式：把声音还回去
+    if (tailHoldEnd >= 0 && video) releaseSound();
     // 切换播放模式时，如果跟读模式在激活状态，自动关闭跟读
     var shadowing = global.EchoLine && global.EchoLine.shadowing;
     if (shadowing && shadowing.isActive()) {
@@ -278,10 +310,7 @@
     cues = cuesList || [];
     currentIndex = -1;
     // 换集时若还停在静音预热里，先把声音还回去
-    if (unmuteAt >= 0 && video) {
-      video.muted = mutedBefore;
-      unmuteAt = -1;
-    }
+    if (video) releaseSound();
     setMode('normal');
 
     if (subtitleListEl) {
