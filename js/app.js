@@ -167,9 +167,9 @@
     showPage('player-page');
     if (subtitleModeSelect) subtitleModeSelect.value = 'en';
     global.EchoLine.player.setSource(ep.videoUrl);
-    if (global.EchoLine.clips) global.EchoLine.clips.setEpisode(ep);
     loadSubtitlesForEpisode(ep, function (cues) {
       currentCues = cues;
+      if (global.EchoLine.clips) global.EchoLine.clips.setEpisode(ep, cues);
       global.EchoLine.player.renderSubtitles(cues, getSubtitleMode());
       global.EchoLine.subtitleSync.init(cues);
       // 初始化跟读模块

@@ -6,7 +6,7 @@
   <title>EchoLine - 老友记英语学习</title>
   <link rel="manifest" href="/manifest.json" />
   <link rel="apple-touch-icon" href="/icons/icon-192.png" />
-  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/style.css?v=2" />
 </head>
 <body>
   <div id="app">
@@ -31,6 +31,10 @@
             <button type="button" id="btn-mode-single" class="mode-btn">🔂 单句</button>
             <button type="button" id="btn-mode-ab" class="mode-btn">🔁 AB</button>
             <button type="button" id="btn-mode-shadowing" class="mode-btn shadowing">🎤 跟读</button>
+            <div id="ab-controls" class="ab-controls" style="display:none;">
+              <button type="button" id="btn-set-a" class="ab-btn">设 A</button>
+              <button type="button" id="btn-set-b" class="ab-btn">设 B</button>
+            </div>
           </div>
           <div class="controls-right">
             <div class="subtitle-mode-control">
@@ -47,10 +51,6 @@
             </div>
           </div>
         </div>
-        <div id="ab-controls" class="ab-controls" style="display:none;">
-          <button type="button" id="btn-set-a" class="ab-btn">设 A</button>
-          <button type="button" id="btn-set-b" class="ab-btn">设 B</button>
-        </div>
       </section>
       <section class="subtitle-section">
         <div id="subtitle-list" class="subtitle-list"></div>
@@ -59,9 +59,9 @@
   </div>
   <script src="js/subtitles.js?v=2"></script>
   <script src="js/player.js?v=2"></script>
-  <script src="js/clips.js?v=1"></script>
-  <script src="js/subtitle-sync.js?v=13"></script>
-  <script src="js/shadowing.js?v=2"></script>
-  <script src="js/app.js?v=5"></script>
+  <script src="js/clips.js?v=2"></script>
+  <script src="js/subtitle-sync.js?v=14"></script>
+  <script src="js/shadowing.js?v=3"></script>
+  <script src="js/app.js?v=6"></script>
 </body>
 </html>

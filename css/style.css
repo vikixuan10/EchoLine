@@ -166,8 +166,7 @@ html, body {
   position: relative;
   width: 100%;
   background: #1a1a1a;
-  max-height: 45vh;
-  overflow: hidden;
+  /* 高度由视频（最高 45vh）加控制栏决定，不再整体截断，否则控制栏下面的 A/B 按钮会被切掉 */
 }
 
 #video {
@@ -189,6 +188,8 @@ html, body {
 
 .mode-buttons {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 0.35rem;
 }
 
@@ -210,17 +211,18 @@ html, body {
   border-color: var(--accent);
 }
 
+/* A/B 按钮紧跟在模式按钮下面一行，只在 AB 模式显示 */
 .ab-controls {
+  flex-basis: 100%;
   display: flex;
-  gap: 0.5rem;
-  padding: 0.4rem 1rem;
-  background: rgba(248, 246, 243, 0.98);
-  border-top: 1px solid var(--border);
+  gap: 0.35rem;
+  margin-top: 0.1rem;
 }
 
 .ab-btn {
-  padding: 0.4rem 0.9rem;
-  font-size: 0.85rem;
+  padding: 0.35rem 0.8rem;
+  font-size: 0.78rem;
+  white-space: nowrap;
   color: var(--text);
   background: var(--bg-card);
   border: 1px solid var(--border);
