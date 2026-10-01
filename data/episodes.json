@@ -196,5 +196,16 @@
     },
     "subtitleMode": "en",
     "thumbUrl": "videos/1001_thumb.jpg"
+  },
+  {
+    "title": "S08E08",
+    "subtitle": "The One with the Stripper",
+    "videoUrl": "videos/0808.mp4",
+    "subtitles": {
+      "en": "subtitles/0808.en.srt",
+      "zh": "subtitles/0808.zh.srt"
+    },
+    "subtitleMode": "en",
+    "thumbUrl": "videos/0808_thumb.jpg"
   }
 ]
