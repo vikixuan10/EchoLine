@@ -4,13 +4,12 @@
  * 也就没有关键帧、跳转延迟、各设备不一致这些问题。
  * 进一集就把小文件逐个预取到本地（一集约 7MB），按下去直接从本地放，不用等网络。
  * 放小文件时视频静音跟着放，画面有动静；画面可能比声音慢一点，循环时画面跳回去也慢一点，声音不受影响。
- * 试验中：URL 带 ?dev=1 且该集在服务器上有 clips 目录时才启用，否则一切照旧。
+ * 该集在服务器上有 clips 目录就启用（2026-10-01 起对所有人生效），没有的集一切照旧。
  */
 
 (function (global) {
   'use strict';
 
-  var devMode = new URLSearchParams(window.location.search).get('dev') === '1';
   var PICTURE_FOLLOWS = true;   // 放小文件时视频是否静音跟着放；false 则画面停在句首
   var GAP = 0.25;               // 循环时两遍之间停多久（秒）
   var PREFETCH_PARALLEL = 2;    // 后台预取同时取几个
@@ -84,7 +83,7 @@
     cues = cueList || [];
     available = false;
     base = null;
-    if (!devMode || !ep || !ep.videoUrl) return;
+    if (!ep || !ep.videoUrl) return;
     var name = ep.videoUrl.split('/').pop().replace(/\.[^.]+$/, '');
     var dir = 'clips/' + name + '/';
     var token = epToken;
