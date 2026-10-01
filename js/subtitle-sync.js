@@ -145,6 +145,7 @@
     }
 
     if (mode === 'single' && currentIndex >= 0) {
+      if (clipLoop) return; // 小文件在循环，视频是停着的，不管
       loopIfDue(time, currentIndex, currentIndex);
       return;
     }
@@ -159,6 +160,7 @@
     }
 
     if (mode === 'ab' && loopAIndex >= 0 && loopBIndex >= 0) {
+      if (clipLoop) return;
       var lo = Math.min(loopAIndex, loopBIndex);
       var hi = Math.max(loopAIndex, loopBIndex);
       if (loopIfDue(time, hi, lo) && seekLead > 0) {
@@ -208,10 +210,48 @@
 
   // --- Mode switching ---
 
+  // --- 小文件循环（?dev=1 且本集有 clips 时）---
+
+  var clipLoop = false; // 当前是否由小文件在循环
+
+  function clips() { return global.EchoLine && global.EchoLine.clips; }
+
+  // 用小文件循环第 lo 到 hi 句；本集没有小文件返回 false，调用方走旧办法
+  function startClipLoop(lo, hi) {
+    var c = clips();
+    if (!c || !c.isAvailable()) return false;
+    releaseSound();
+    seekLockIndex = -1;
+    // 画面停在这句开头，声音从小文件出
+    if (video) { video.pause(); video.currentTime = cues[lo].start; }
+    var ok = c.playRange(lo, hi, true, function (idx) {
+      currentIndex = idx;
+      player.setCurrentIndex(idx);
+      if (Date.now() - lastUserScroll > scrollDebounceMs) player.scrollToIndex(idx);
+    }, null);
+    clipLoop = ok;
+    return ok;
+  }
+
+  function stopClipLoop() {
+    if (!clipLoop) return;
+    clipLoop = false;
+    var c = clips();
+    if (c) c.stop();
+  }
+
   function setMode(m) {
+    var wasClipLoop = clipLoop;
+    stopClipLoop();
     mode = m;
     // 句尾已提前静音但还没跳回时切了模式：把声音还回去
     if (tailHoldEnd >= 0 && video) releaseSound();
+    // 从小文件循环切回正常：视频从这句接着放
+    if (wasClipLoop && m === 'normal' && currentIndex >= 0) {
+      seekLockIndex = seekLead > 0 ? currentIndex : -1;
+      seekToCue(currentIndex);
+    }
+    if (m === 'single' && currentIndex >= 0) startClipLoop(currentIndex, currentIndex);
     // 切换播放模式时，如果跟读模式在激活状态，自动关闭跟读
     var shadowing = global.EchoLine && global.EchoLine.shadowing;
     if (shadowing && shadowing.isActive()) {
@@ -259,6 +299,7 @@
     sortAB();
     updateABMarkers();
     updateABButtons();
+    restartABClipLoop();
   }
 
   function onSetB() {
@@ -271,6 +312,15 @@
     sortAB();
     updateABMarkers();
     updateABButtons();
+    restartABClipLoop();
+  }
+
+  // A、B 都定了就用小文件开始循环；改了 A 或 B 就重来
+  function restartABClipLoop() {
+    stopClipLoop();
+    if (mode === 'ab' && loopAIndex >= 0 && loopBIndex >= 0) {
+      startClipLoop(Math.min(loopAIndex, loopBIndex), Math.max(loopAIndex, loopBIndex));
+    }
   }
 
   function sortAB() {
@@ -325,9 +375,11 @@
       player.video.removeEventListener('play', startRaf);
       player.video.removeEventListener('pause', stopRaf);
       player.video.removeEventListener('ended', stopRaf);
+      player.video.removeEventListener('play', onVideoPlayDuringClipLoop);
       player.video.addEventListener('play', startRaf);
       player.video.addEventListener('pause', stopRaf);
       player.video.addEventListener('ended', stopRaf);
+      player.video.addEventListener('play', onVideoPlayDuringClipLoop);
     }
 
     if (btnModeNormal) {
@@ -352,6 +404,20 @@
     }
 
     updateHighlight();
+  }
+
+  // 小文件循环时用户按了视频自己的播放键：交还给视频，回到正常模式
+  function onVideoPlayDuringClipLoop() {
+    if (!clipLoop) return;
+    clipLoop = false;
+    var c = clips();
+    if (c) c.stop();
+    mode = 'normal';
+    if (btnModeNormal) btnModeNormal.classList.add('active');
+    if (btnModeSingle) btnModeSingle.classList.remove('active');
+    if (btnModeAb) btnModeAb.classList.remove('active');
+    if (abControls) abControls.style.display = 'none';
+    clearAB();
   }
 
   function onClickNormal() { setMode('normal'); }

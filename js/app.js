@@ -167,6 +167,7 @@
     showPage('player-page');
     if (subtitleModeSelect) subtitleModeSelect.value = 'en';
     global.EchoLine.player.setSource(ep.videoUrl);
+    if (global.EchoLine.clips) global.EchoLine.clips.setEpisode(ep);
     loadSubtitlesForEpisode(ep, function (cues) {
       currentCues = cues;
       global.EchoLine.player.renderSubtitles(cues, getSubtitleMode());
@@ -227,6 +228,7 @@
       backToList.addEventListener('click', function (e) {
         e.preventDefault();
         if (video) video.pause();
+        if (global.EchoLine.clips) global.EchoLine.clips.stop();
         // 重置跟读模块（释放麦克风等资源）
         if (global.EchoLine.shadowing) {
           global.EchoLine.shadowing.reset();
