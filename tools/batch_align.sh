@@ -8,7 +8,7 @@
 set -u
 cd "$(dirname "$0")/.." || exit 1
 ROOT=$(pwd)
-VIDEO_DIR="/Users/weiwei/Library/CloudStorage/GoogleDrive-vikixuan10@gmail.com/我的云端硬盘/Friends/S10"
+FRIENDS_DIR="/Users/weiwei/Library/CloudStorage/GoogleDrive-vikixuan10@gmail.com/我的云端硬盘/Friends"
 WORK=/tmp/whisper_batch
 OUT=$WORK/out
 LOG=$WORK/batch.log
@@ -44,10 +44,15 @@ mapping | sort | while read -r ep en zh; do
     valid=$(python3 -c "import json,sys; d=json.load(open('$json')); print(sum(len(s.get('words') or []) for s in d.get('segments',[])))" 2>/dev/null || echo 0)
   fi
   if [ "${valid:-0}" -lt 500 ]; then
-    if [ ! -f "$VIDEO_DIR/$ep.mp4" ]; then
+    # 集数前两位是季号，视频按季分目录，季目录不补零：0808 -> S8，1017 -> S10
+    if [[ ! "$ep" =~ ^[0-9]{4}$ ]]; then
+      echo "[$(date '+%H:%M:%S')] FAIL $ep 集数不是四位数字，推不出季目录" | tee -a "$LOG"; continue
+    fi
+    video="$FRIENDS_DIR/S$((10#${ep:0:2}))/$ep.mp4"
+    if [ ! -f "$video" ]; then
       echo "[$(date '+%H:%M:%S')] FAIL $ep 找不到视频" | tee -a "$LOG"; continue
     fi
-    ffmpeg -nostdin -y -v error -i "$VIDEO_DIR/$ep.mp4" -vn -ac 1 -ar 16000 "$d/$ep.wav" || { echo "[$(date '+%H:%M:%S')] FAIL $ep 抽音频失败" | tee -a "$LOG"; continue; }
+    ffmpeg -nostdin -y -v error -i "$video" -vn -ac 1 -ar 16000 "$d/$ep.wav" || { echo "[$(date '+%H:%M:%S')] FAIL $ep 抽音频失败" | tee -a "$LOG"; continue; }
     whisperkit-cli transcribe --audio-path "$d/$ep.wav" --model whisper-medium --language en \
       --word-timestamps --report --report-path "$d/" < /dev/null > "$d/whisper.log" 2>&1
     valid=$(python3 -c "import json,sys; d=json.load(open('$json')); print(sum(len(s.get('words') or []) for s in d.get('segments',[])))" 2>/dev/null || echo 0)
