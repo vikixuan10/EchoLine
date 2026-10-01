@@ -154,6 +154,7 @@
     if (idx !== currentIndex) {
       currentIndex = idx;
       player.setCurrentIndex(idx);
+      if (clips()) clips().warm(idx); // 顺手把这句和后两句的小文件预取好，按单句时立刻出声
       if (Date.now() - lastUserScroll > scrollDebounceMs) {
         player.scrollToIndex(idx);
       }
@@ -176,6 +177,7 @@
     if (index < 0 || index >= cues.length) return;
     currentIndex = index;
     if (seekLead > 0) seekLockIndex = index; // 提前起跳期间锁定高亮到目标字幕
+    if (clips()) clips().warm(index);
     seekToCue(index);
     player.setCurrentIndex(index);
     player.scrollToIndex(index);
@@ -222,8 +224,7 @@
     if (!c || !c.isAvailable()) return false;
     releaseSound();
     seekLockIndex = -1;
-    // 画面停在这句开头，声音从小文件出
-    if (video) { video.pause(); video.currentTime = cues[lo].start; }
+    // 声音从小文件出，画面由 clips 模块带着视频静音跟放
     var ok = c.playRange(lo, hi, true, function (idx) {
       currentIndex = idx;
       player.setCurrentIndex(idx);
@@ -375,12 +376,12 @@
       player.video.removeEventListener('play', startRaf);
       player.video.removeEventListener('pause', stopRaf);
       player.video.removeEventListener('ended', stopRaf);
-      player.video.removeEventListener('play', onVideoPlayDuringClipLoop);
       player.video.addEventListener('play', startRaf);
       player.video.addEventListener('pause', stopRaf);
       player.video.addEventListener('ended', stopRaf);
-      player.video.addEventListener('play', onVideoPlayDuringClipLoop);
     }
+    // 小文件循环时用户按了视频自己的播放键：clips 模块会通知这里
+    if (clips()) clips().onTakeover(onVideoPlayDuringClipLoop);
 
     if (btnModeNormal) {
       btnModeNormal.removeEventListener('click', onClickNormal);
@@ -406,12 +407,10 @@
     updateHighlight();
   }
 
-  // 小文件循环时用户按了视频自己的播放键：交还给视频，回到正常模式
+  // 小文件循环时用户按了视频自己的播放键：交还给视频，回到正常模式（小文件已由 clips 模块停掉）
   function onVideoPlayDuringClipLoop() {
     if (!clipLoop) return;
     clipLoop = false;
-    var c = clips();
-    if (c) c.stop();
     mode = 'normal';
     if (btnModeNormal) btnModeNormal.classList.add('active');
     if (btnModeSingle) btnModeSingle.classList.remove('active');
