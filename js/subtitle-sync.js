@@ -29,21 +29,21 @@
   var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
   var seekLockIndex = -1; // 点击字幕后锁定高亮到目标索引，直到播放到达该字幕
 
-  // 干净切句（试验中，URL 带 ?dev=1 才生效）：
-  // 1) 提前起跳的那一段静音，播到句首才出声，不再带进上一句的尾音
-  // 2) 循环时句尾不越过下一句的起点，跳回句首也走同样的静音预热
+  // 干净切句：
+  // 1) iOS 跳转后会吃掉开头一小段声音，所以提前起跳；提前的那一段静音，播到句首才出声，
+  //    不带进上一句的尾音。循环跳回句首也一样
+  // 2) 循环时句尾不越过下一句的起点
+  // 以下两个数是 2026-10-01 在 iPhone 外放上实测定的，网址加 ?lead=1 或 ?ml=0.25 可临时改，方便在手机上调
   var urlParams = new URLSearchParams(window.location.search);
-  var cleanCut = urlParams.get('dev') === '1';
-  var leadParam = parseFloat(urlParams.get('lead')); // 试验用：?dev=1&lead=0.3 临时改提前量
-  var seekLead = (cleanCut && !isNaN(leadParam)) ? leadParam : (isIOS ? 0.5 : 0);
-  // iPhone 上「静音 / 出声」的指令要过约 0.3 秒才听得出效果（2026-10-01 实测：句首句尾都晚 0.3 秒），
-  // 所以两个指令都提前这么久发。试验用：?dev=1&ml=0.25 临时改这个数
+  var leadParam = parseFloat(urlParams.get('lead'));
   var mlParam = parseFloat(urlParams.get('ml'));
-  var muteLatency = !cleanCut ? 0 : (!isNaN(mlParam) ? mlParam : (isIOS ? 0.3 : 0));
-  // 起跳提前量至少比指令延迟多 0.2 秒，保证「出声」指令发在跳转之后
+  // iPhone 上「静音 / 出声」的指令要过约 0.3 秒才听得出效果，所以两个指令都提前这么久发
+  var muteLatency = !isNaN(mlParam) ? mlParam : (isIOS ? 0.3 : 0);
+  // 提前起跳多久。0.3 秒的延迟只在播放稳定后成立，刚跳转完指令几乎立刻见效，
+  // 所以要留够时间让播放稳下来再发「出声」：实测 0.5 会带进上一句尾音，0.8 和 1 效果相同
+  var seekLead = !isNaN(leadParam) ? leadParam : (isIOS ? 0.8 : 0);
   if (muteLatency > 0) seekLead = Math.max(seekLead, muteLatency + 0.2);
   var TAIL_PAD = 0.15;      // 句尾留的余量
-  var UNMUTE_EARLY = 0.03;  // 比句首早一点点恢复声音，免得吃掉第一个音
   var unmuteAt = -1;        // >= 0 表示正在静音预热，播到这个时间发「出声」指令
   var tailHoldEnd = -1;     // >= 0 表示句尾已提前静音，值是这一句真正的截止时间
   var holding = false;      // 当前是否由我们按着静音
@@ -63,7 +63,6 @@
   // 这一句最晚播到哪：句尾留余量，但不越过下一句的起点
   function cutEnd(index) {
     var end = cues[index].end;
-    if (!cleanCut) return end + TAIL_PAD;
     for (var j = index + 1; j < cues.length; j++) {
       // 译注与正文同时间，跳过它找真正的下一句
       if (cues[j].start >= end - 0.05) {
@@ -73,15 +72,14 @@
     return end + TAIL_PAD;
   }
 
-  // 跳到某句句首。isLoopBack 表示循环跳回（旧行为里循环跳回不提前）
-  function seekToCue(index, isLoopBack) {
+  // 跳到某句句首：提前起跳并静音，播到句首再出声
+  function seekToCue(index) {
     var start = cues[index].start;
-    var lead = (!cleanCut && isLoopBack) ? 0 : seekLead;
-    var target = Math.max(0, start - lead);
-    if (cleanCut && target < start) {
+    var target = Math.max(0, start - seekLead);
+    if (target < start) {
       holdSound();
       tailHoldEnd = -1;
-      unmuteAt = start - UNMUTE_EARLY - muteLatency;
+      unmuteAt = Math.max(0, start - muteLatency); // 不能为负，负数会被当成「没在预热」
     } else if (holding) {
       releaseSound();
     }
@@ -107,7 +105,7 @@
       tailHoldEnd = end;
     }
     if (time <= end) return false;
-    seekToCue(startIndex, true);
+    seekToCue(startIndex);
     return true;
   }
 
@@ -163,7 +161,7 @@
     if (mode === 'ab' && loopAIndex >= 0 && loopBIndex >= 0) {
       var lo = Math.min(loopAIndex, loopBIndex);
       var hi = Math.max(loopAIndex, loopBIndex);
-      if (loopIfDue(time, hi, lo) && cleanCut && seekLead > 0) {
+      if (loopIfDue(time, hi, lo) && seekLead > 0) {
         // 提前起跳期间高亮先停在 A 句，免得闪到 A 的上一句
         seekLockIndex = lo;
         currentIndex = lo;
@@ -175,9 +173,8 @@
   function goToIndex(index) {
     if (index < 0 || index >= cues.length) return;
     currentIndex = index;
-    // iOS seek 后有缓冲延迟会吃掉开头几个词，提前 0.5 秒补偿
-    if (seekLead > 0) seekLockIndex = index; // 锁定高亮到目标字幕
-    seekToCue(index, false);
+    if (seekLead > 0) seekLockIndex = index; // 提前起跳期间锁定高亮到目标字幕
+    seekToCue(index);
     player.setCurrentIndex(index);
     player.scrollToIndex(index);
   }
