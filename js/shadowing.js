@@ -243,6 +243,13 @@
     }
 
     var cue = cues[index];
+    // 本集有切好的小文件就直接放那一句，画面停在句首
+    var clips = global.EchoLine && global.EchoLine.clips;
+    if (clips && clips.isAvailable()) {
+      video.pause();
+      video.currentTime = cue.start;
+      if (clips.playRange(index, index, false, null, null)) return;
+    }
     // iOS 需要提前 0.5 秒补偿缓冲延迟
     var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
     var seekTime = isIOS ? Math.max(0, cue.start - 0.5) : cue.start;
