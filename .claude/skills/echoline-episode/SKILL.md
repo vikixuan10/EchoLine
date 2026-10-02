@@ -126,6 +126,16 @@ python3 tools/align_subtitles.py {集数} /tmp/{集数}.en.srt /tmp/whisper_batc
 
 播放器的单句循环、AB 循环、跟读重播都是放预先切好的每句一个音频小文件（`clips/{集数}/{序号}.m4a`，序号 = 字幕条号），不在视频里跳转。前提是「一行字幕 = 一句话」，所以要先把字幕组为控制行宽拆开的半句合回去，再切。
 
+**0. 先看中英行数差多少**
+
+`grep -c -- '-->' subtitles/{集数}.en.srt subtitles/{集数}.zh.srt`。两边差不到 2%（通常只差几条译注）直接往下走；差很多（如 S10E12 英文 634、中文 472，一行中文跨两行英文）就先跑：
+
+```bash
+python3 tools/rebuild_zh_by_text.py {集数} "{Friends}/Subtitle/Original/Friends.{季集号}.chs&eng.ass"
+```
+
+它按双语 ASS 里带的英文原句把每行中文配到英文行上，跨多行的把英文合成一句，直接改写 `subtitles/` 里的两个文件。跑完看它报的「配上 / 没配上」，没配上的应只剩语气词和片名行。然后再做下面的合并。
+
 **1. 出合并候选表给用户看（不能跳过）**
 
 先把对齐后的字幕放进 `subtitles/`（第六步的 cp），然后：
