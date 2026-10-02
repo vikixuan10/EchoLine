@@ -20,7 +20,7 @@
   var episodesText = null;    // 上次取到的剧集列表原文，没变就不重画
   var currentCues = [];
   var loadedPage = null;      // 打开时服务器上的首页内容，用来判断之后有没有上过新版
-  var updatePending = false;  // 在播放页时发现有新版，等回到列表再刷新
+  var updatePending = null;   // 发现有新版时记下服务器上的首页内容；在播放页时等回到列表再刷新
 
   function showPage(id) {
     episodeListPage.classList.toggle('active', id === 'episode-list-page');
@@ -56,26 +56,58 @@
     xhr.send();
   }
 
-  // 自动更新。从主屏幕图标打开时，iPhone 多半是接着上次的画面继续，页面不会重新加载，
-  // 上线的新版就一直看不到。所以每次回到前台、每次回到列表，都向服务器取一次首页：
-  // 和打开时取到的不一样，说明上过线，重新加载整页（改 JS / CSS 都要给首页里的 ?v= 加一，首页必然跟着变）。
-  // 在播放页时不打断，先记下，等回到列表再刷新。首页没变就只刷新剧集列表（新上的集）。
-  // 第一次调用只是记下打开时的首页内容。
+  // 自动更新。从主屏幕图标打开时，iPhone 要么接着上次的画面继续（页面不重新加载），
+  // 要么直接用手机里存的旧首页（不向服务器要），上线的新版就一直看不到。
+  // 所以每次打开、每次回到前台、每次回到列表，都向服务器取一次首页，两种情况算有新版：
+  //   1. 服务器首页引用的脚本 / 样式（带 ?v=）当前页面里没有：这一页是手机缓存里的旧版；
+  //   2. 首页内容和上次取到的不一样：页面开着的时候上过线。
+  // 有新版就重新加载整页（重新加载会向服务器要首页）。在播放页时不打断，先记下，等回到列表再刷新。
+  // 没有新版就只刷新剧集列表（新上的集）。
   function checkForUpdate() {
     var xhr = new XMLHttpRequest();
     xhr.open('GET', PAGE_URL + '?t=' + Date.now());
     xhr.onload = function () {
-      if (xhr.status !== 200 || !xhr.responseText) return;
-      if (loadedPage === null) { loadedPage = xhr.responseText; return; }
+      var text = xhr.responseText;
+      if (xhr.status !== 200 || !text) return;
+      var stale = pageIsStale(text);
+      if (!stale && loadedPage === null) { loadedPage = text; return; }
       var onList = episodeListPage.classList.contains('active');
-      if (xhr.responseText !== loadedPage) {
-        if (onList) window.location.reload();
-        else updatePending = true;
+      if (stale || text !== loadedPage) {
+        updatePending = text;
+        if (onList) reloadOnce();
       } else if (onList) {
         loadEpisodes();
       }
     };
     xhr.send();
+  }
+
+  // 服务器首页引用的脚本 / 样式，当前页面里是不是都有；缺一个就说明这一页是旧版
+  function pageIsStale(serverPage) {
+    var sel = 'script[src], link[rel="stylesheet"]';
+    var have = {};
+    var nodes = document.querySelectorAll(sel);
+    var i;
+    for (i = 0; i < nodes.length; i++) {
+      have[nodes[i].getAttribute('src') || nodes[i].getAttribute('href')] = true;
+    }
+    var want = new DOMParser().parseFromString(serverPage, 'text/html').querySelectorAll(sel);
+    for (i = 0; i < want.length; i++) {
+      if (!have[want[i].getAttribute('src') || want[i].getAttribute('href')]) return true;
+    }
+    return false;
+  }
+
+  // 为同一版首页只自动重载一次：万一重载后拿到的还是旧页面，不会没完没了地转
+  function reloadOnce() {
+    var s = updatePending, h = 0;
+    for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+    var mark = s.length + ':' + h;
+    try {
+      if (sessionStorage.getItem('echoline-reloaded-for') === mark) return;
+      sessionStorage.setItem('echoline-reloaded-for', mark);
+    } catch (e) {}
+    window.location.reload();
   }
 
   function renderEpisodeList() {
@@ -272,7 +304,7 @@
           global.EchoLine.shadowing.reset();
         }
         showPage('episode-list-page');
-        if (updatePending) window.location.reload();
+        if (updatePending) reloadOnce();
         else checkForUpdate();
       });
     }
