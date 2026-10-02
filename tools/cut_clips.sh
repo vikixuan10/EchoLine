@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
 # 按字幕把一集的声音切成每句一个小文件：clips/{集数}/{序号}.m4a（序号 = 字幕条号，4 位补零）
 # 单句循环 / AB 循环 / 跟读重播直接放小文件，不再在视频里跳转。字幕改了就重跑一次。
-# 用法：bash tools/cut_clips.sh 0808
+# 用法：bash tools/cut_clips.sh 0808 [英文字幕路径]   文件名不规整的集把 episodes.json 里写的英文字幕路径传进来
 # 产物不进 Git（.gitignore 里有 clips/），用 scp 传到服务器 ~/EchoLine/clips/{集数}/
 set -euo pipefail
 cd "$(dirname "$0")/.."
 ep=${1:-}
-[[ "$ep" =~ ^[0-9]{4}$ ]] || { echo "用法：bash tools/cut_clips.sh 0808（四位集数）"; exit 1; }
+[[ "$ep" =~ ^[0-9]{4}$ ]] || { echo "用法：bash tools/cut_clips.sh 0808（四位集数）[英文字幕路径]"; exit 1; }
 
 FRIENDS="$HOME/Library/CloudStorage/GoogleDrive-vikixuan10@gmail.com/我的云端硬盘/Friends"
 video="$FRIENDS/S$((10#${ep:0:2}))/$ep.mp4"     # 集数前两位是季号，季目录不补零
-srt="subtitles/$ep.en.srt"
+srt="${2:-subtitles/$ep.en.srt}"
 [ -f "$video" ] || { echo "找不到视频 $video"; exit 1; }
 [ -f "$srt" ] || { echo "找不到字幕 $srt"; exit 1; }
 

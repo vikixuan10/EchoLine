@@ -122,6 +122,48 @@ python3 tools/align_subtitles.py {集数} /tmp/{集数}.en.srt /tmp/whisper_batc
 
 > 已上架的集要重新对齐时用 `bash tools/batch_align.sh {集数}`，它按 `data/episodes.json` 找字幕、复用已有的 whisper JSON，产出同样在 `/tmp/whisper_batch/out/`，不直接改 `subtitles/`。
 
+### 第三步半：合并半句，再切每句音频
+
+播放器的单句循环、AB 循环、跟读重播都是放预先切好的每句一个音频小文件（`clips/{集数}/{序号}.m4a`，序号 = 字幕条号），不在视频里跳转。前提是「一行字幕 = 一句话」，所以要先把字幕组为控制行宽拆开的半句合回去，再切。
+
+**1. 出合并候选表给用户看（不能跳过）**
+
+先把对齐后的字幕放进 `subtitles/`（第六步的 cp），然后：
+
+```bash
+cd ~/Documents/PROJECTS/EchoLine
+python3 tools/merge_cues.py {集数} --list --table /tmp/{集数}-合并候选.md
+```
+
+规则（2026-10-01 与用户定）：上一行以「...」结尾且下一行以「...」开头；或上一行没有句末标点、下一行小写开头、两行间隔不到 0.6 秒。两人对话行（`- Why me? - Hey...`）不动，译注行不动，不设长度上限。候选表每行列出原来的两行、合并后的中英文、时长，用 SendUserFile 发给用户，请用户只回复「不合」的序号。一集通常 30 到 40 处。
+
+**2. 按用户的意见合并**
+
+```bash
+python3 tools/merge_cues.py {集数}                 # 全部同意
+python3 tools/merge_cues.py {集数} --skip 3,7      # 第 3、7 处不合
+```
+
+它直接改写 `subtitles/{集数}.en.srt` 与 `.zh.srt`：英文把「... ...」去掉拼成一句，中文两半之间留两个空格，译文不改。中英配对用的是播放器显示时同一套办法，所以 S10E12 这种中文时间轴对不上的集也能合。文件名不规整的集用 `--en` `--zh` 指明路径（按 `data/episodes.json` 里写的）。
+
+**3. 切音频**
+
+```bash
+bash tools/cut_clips.sh {集数}                     # 文件名不规整的集：bash tools/cut_clips.sh 1016 subtitles/episode_1.en.srt
+```
+
+先整集抽 44.1k wav，再按每条字幕切成 AAC 64k 单声道小文件，首尾各 15 毫秒淡入淡出，一集约 16 秒、7MB，产物在 `clips/{集数}/`（不进 Git）。**字幕改了必须重切**，序号是按条号对应的。
+
+**4. 上传小文件**
+
+```bash
+ssh ubuntu@3.252.132.90 'mkdir -p ~/EchoLine/clips/{集数}'
+scp -q -r clips/{集数}/. ubuntu@3.252.132.90:~/EchoLine/clips/{集数}/
+ssh ubuntu@3.252.132.90 'chmod 644 ~/EchoLine/clips/{集数}/*.m4a; ls ~/EchoLine/clips/{集数} | wc -l'
+```
+
+播放器进一集时探测 `clips/{集数}/0001.m4a` 在不在，在就启用小文件并整集预取到手机，不在就走视频跳转的老办法。所以小文件可以晚于字幕上传，但上传后要和字幕条数一致。
+
 ### 第四步：生成缩略图
 
 在 60、90、120、180、240 秒处各截一帧，计算亮度，选最亮的：
@@ -156,6 +198,7 @@ ssh ubuntu@3.252.132.90 "chmod 644 ~/EchoLine/videos/{集数}.mp4"
 ```bash
 cp /tmp/whisper_batch/out/{集数}/{集数}.en.srt ~/Documents/PROJECTS/EchoLine/subtitles/
 cp /tmp/whisper_batch/out/{集数}/{集数}.zh.srt ~/Documents/PROJECTS/EchoLine/subtitles/
+# 这里先做「第三步半」的合并与切音频，上传的必须是合并后的字幕，否则小文件序号对不上
 
 # 先传临时目录再 mv 换名（原子操作），正在看的人不会拿到半截文件；字幕是静态文件，服务端每次请求读盘，不需要重启 PM2
 ssh ubuntu@3.252.132.90 'mkdir -p ~/EchoLine/subtitles/.incoming'
@@ -205,7 +248,8 @@ git push origin main
 
 - `ffmpeg` / `ffprobe`：已安装（通过 Homebrew）
 - `whisperkit-cli`：`/opt/homebrew/bin/whisperkit-cli`（Apple Silicon Metal GPU 加速，**首选工具**）
-- `tools/align_subtitles.py`：项目内，纯标准库 Python，无需安装依赖
+- `tools/align_subtitles.py`、`tools/merge_cues.py`：项目内，纯标准库 Python，无需安装依赖
+- `tools/cut_clips.sh`：项目内，只依赖 ffmpeg
 - SSH 免密登录：`ubuntu@3.252.132.90`（已配置）
 
 > `ffsubsync` 已不再使用（本机也已不在 PATH 里）。
@@ -220,5 +264,6 @@ git push origin main
 - ASS 文件编码不固定，需自动检测（先看 BOM，没有 BOM 再逐个尝试，顺序见第一步）
 - 字幕文件如果不是 ASS 格式（如已是 SRT），跳过解析步骤，直接从第二步开始
 - 中国版视频可能剪掉了部分片段。逐句对齐天然不受影响（每句独立定位），这正是弃用整集平移的原因
-- **每次处理完必须同步三个地方：本机项目目录、服务器、GitHub**
+- **每次处理完必须同步三个地方：本机项目目录、服务器、GitHub**；小文件（`clips/`）不进 Git，只在本机和服务器
+- 改字幕（重新对齐、改错字、合并）之后，`cut_clips.sh` 重切并重传整集小文件，别只传几个
 - 本 skill 的唯一真源是项目仓库 `.claude/skills/echoline-episode/SKILL.md`（git 跟踪即备份）；`~/.claude/skills/echoline-episode` 是指向它的软链，因此任何目录下开的会话都加载同一份实体，改这里就够了。不要再往 claude.ai 上传副本
