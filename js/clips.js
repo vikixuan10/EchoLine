@@ -21,6 +21,7 @@
   audio.preload = 'auto';
 
   var base = null;        // 本集 clips 目录，如 'clips/0808/'
+  var ver = '';           // 本集小文件的版本，带在每个地址后面，如 '?v=6abf89d3a490'
   var available = false;  // 探测到小文件存在才为 true
   var cues = [];
   var seq = null;         // 正在放的范围 { lo, hi, cur, loop, onIndex, onDone }
@@ -33,7 +34,7 @@
   var onTakeover = null;  // 用户按了视频播放键时通知调用方
 
   function pad(n) { return ('0000' + n).slice(-4); }
-  function clipUrl(index) { return base + pad(index + 1) + '.m4a'; }
+  function clipUrl(index) { return base + pad(index + 1) + '.m4a' + ver; }
 
   // 取一个小文件到本地，返回 Promise<blob 地址>；已有就直接给
   function fetchClip(index, token) {
@@ -83,12 +84,18 @@
     cues = cueList || [];
     available = false;
     base = null;
+    ver = '';
     if (!ep || !ep.videoUrl) return;
     var name = ep.videoUrl.split('/').pop().replace(/\.[^.]+$/, '');
     var dir = 'clips/' + name + '/';
     var token = epToken;
-    fetch(dir + pad(1) + '.m4a').then(function (r) {
+    // 探测时绕开缓存，顺便把第一个小文件的修改标记当作本集的版本号：
+    // 这一集重切、重传之后标记会变，地址跟着变，手机就不会再用以前存下的旧音频配新字幕。
+    fetch(dir + pad(1) + '.m4a?t=' + Date.now()).then(function (r) {
       if (!r.ok || token !== epToken) return;
+      var tag = r.headers.get('ETag') || r.headers.get('Last-Modified') || '';
+      tag = tag.replace(/\W/g, '');
+      ver = tag ? '?v=' + tag : '';
       base = dir;
       available = true;
       prefetchAll(token);

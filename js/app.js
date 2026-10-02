@@ -6,6 +6,7 @@
   'use strict';
 
   var EPISODES_URL = 'data/episodes.json';
+  var PAGE_URL = 'index.html';
   var episodeListPage = document.getElementById('episode-list-page');
   var playerPage = document.getElementById('player-page');
   var episodeListEl = document.getElementById('episode-list');
@@ -16,7 +17,10 @@
   var subtitleModeSelect = document.getElementById('subtitle-mode-select');
 
   var episodes = [];
+  var episodesText = null;    // 上次取到的剧集列表原文，没变就不重画
   var currentCues = [];
+  var loadedPage = null;      // 打开时服务器上的首页内容，用来判断之后有没有上过新版
+  var updatePending = false;  // 在播放页时发现有新版，等回到列表再刷新
 
   function showPage(id) {
     episodeListPage.classList.toggle('active', id === 'episode-list-page');
@@ -27,8 +31,12 @@
     var xhr = new XMLHttpRequest();
     xhr.open('GET', EPISODES_URL + '?t=' + Date.now());
     xhr.onload = function () {
+      var text = xhr.responseText || '[]';
+      if (text === episodesText) return;                        // 列表没变，不重画
+      if (episodesText !== null && xhr.status !== 200) return;  // 刷新时出错，保留现有列表
+      episodesText = text;
       try {
-        episodes = JSON.parse(xhr.responseText || '[]');
+        episodes = JSON.parse(text);
       } catch (e) {
         episodes = [];
       }
@@ -41,8 +49,31 @@
       renderEpisodeList();
     };
     xhr.onerror = function () {
+      if (episodesText !== null) return;                        // 刷新时没网，保留现有列表
       episodes = [];
       renderEpisodeList();
+    };
+    xhr.send();
+  }
+
+  // 自动更新。从主屏幕图标打开时，iPhone 多半是接着上次的画面继续，页面不会重新加载，
+  // 上线的新版就一直看不到。所以每次回到前台、每次回到列表，都向服务器取一次首页：
+  // 和打开时取到的不一样，说明上过线，重新加载整页（改 JS / CSS 都要给首页里的 ?v= 加一，首页必然跟着变）。
+  // 在播放页时不打断，先记下，等回到列表再刷新。首页没变就只刷新剧集列表（新上的集）。
+  // 第一次调用只是记下打开时的首页内容。
+  function checkForUpdate() {
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', PAGE_URL + '?t=' + Date.now());
+    xhr.onload = function () {
+      if (xhr.status !== 200 || !xhr.responseText) return;
+      if (loadedPage === null) { loadedPage = xhr.responseText; return; }
+      var onList = episodeListPage.classList.contains('active');
+      if (xhr.responseText !== loadedPage) {
+        if (onList) window.location.reload();
+        else updatePending = true;
+      } else if (onList) {
+        loadEpisodes();
+      }
     };
     xhr.send();
   }
@@ -224,6 +255,13 @@
 
   function init() {
     loadEpisodes();
+    checkForUpdate();
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden) checkForUpdate();
+    });
+    window.addEventListener('pageshow', function (e) {
+      if (e.persisted) checkForUpdate();
+    });
     if (backToList) {
       backToList.addEventListener('click', function (e) {
         e.preventDefault();
@@ -234,6 +272,8 @@
           global.EchoLine.shadowing.reset();
         }
         showPage('episode-list-page');
+        if (updatePending) window.location.reload();
+        else checkForUpdate();
       });
     }
     if (subtitleModeSelect) {
