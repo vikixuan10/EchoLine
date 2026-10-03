@@ -30,6 +30,7 @@
   var inflight = {};      // 序号 -> 正在取的 Promise
   var epToken = 0;        // 换集后作废旧的预取
   var expectPlay = false; // 我们自己让视频播放时置 true，区分用户按的播放键
+  var expectPause = false; // 我们自己让视频暂停时置 true，区分用户按的暂停键
   var mutedBefore = null; // 让视频静音之前用户自己的静音状态
   var onTakeover = null;  // 用户按了视频播放键时通知调用方
 
@@ -119,7 +120,7 @@
     var mine = seq, idx = seq.cur;
     if (mine.onIndex) mine.onIndex(idx);
     var startAudio = function (src) {
-      if (seq !== mine || seq.cur !== idx) return;
+      if (seq !== mine || seq.cur !== idx || seq.paused) return;
       audio.src = src;
       audio.playbackRate = video.playbackRate || 1;
       var p = audio.play();
@@ -127,11 +128,14 @@
       // 画面：跳到这句开头静音跟着放
       if (PICTURE_FOLLOWS && cues[idx]) {
         video.currentTime = cues[idx].start;
-        expectPlay = true;
-        var vp = video.play();
-        if (vp && vp.catch) vp.catch(function () { expectPlay = false; });
+        // 视频已经在放就不用再叫它放：只有从停着变成放才有 play 事件，这时做记号才不会留下空记号
+        if (video.paused) {
+          expectPlay = true;
+          var vp = video.play();
+          if (vp && vp.catch) vp.catch(function () { expectPlay = false; });
+        }
       } else if (cues[idx]) {
-        video.pause();
+        if (!video.paused) { expectPause = true; video.pause(); }
         video.currentTime = cues[idx].start;
       }
     };
@@ -159,12 +163,24 @@
     }
   }
 
-  // 视频的 play 事件：是我们自己让它放的就忽略；否则是用户按了播放键，把小文件停掉交还给视频
+  // 视频的 play 事件：是我们自己让它放的就忽略；用户按暂停之后再按播放，从这一句开头接着循环；
+  // 其余情况是用户在循环中按了播放键，把小文件停掉交还给视频
   if (video) video.addEventListener('play', function () {
     if (expectPlay) { expectPlay = false; return; }
     if (!seq) return;
+    if (seq.paused) { seq.paused = false; playCurrent(); return; }
     stop(true);
     if (onTakeover) onTakeover();
+  });
+
+  // 视频的 pause 事件：是我们自己让它停的就忽略；否则是用户按了暂停键，小文件跟着停，
+  // 仍留在单句 / AB 模式里，等用户再按播放
+  if (video) video.addEventListener('pause', function () {
+    if (expectPause) { expectPause = false; return; }
+    if (!seq || seq.paused) return;
+    seq.paused = true;
+    if (timer) { clearTimeout(timer); timer = null; }
+    if (!audio.paused) audio.pause();
   });
   if (speedSelect) speedSelect.addEventListener('change', function () {
     audio.playbackRate = parseFloat(speedSelect.value) || 1;
